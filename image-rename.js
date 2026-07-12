@@ -1,12 +1,37 @@
+function encodeDisplayName(name) {
+  const bytes = new TextEncoder().encode(name.trim());
+  let binary = "";
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function decodeDisplayName(value) {
+  try {
+    const padding = "=".repeat((4 - (value.length % 4)) % 4);
+    const binary = atob(value.replace(/-/g, "+").replace(/_/g, "/") + padding);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
+const originalDisplayName = displayName;
+displayName = function(path) {
+  const match = path.match(/^mumu-name-([A-Za-z0-9_-]+)-\d+(\.[^.]+)$/);
+  if (match) return decodeDisplayName(match[1]) || originalDisplayName(path);
+  return originalDisplayName(path);
+};
+
 function imagePathFromDisplayName(name, items) {
   return items.find((item) => displayName(item.name) === name)?.name || null;
 }
 
 function renamedImagePath(oldPath, newName) {
   const extension = oldPath.match(/\.[^.]+$/)?.[0]?.toLowerCase() || ".jpg";
-  const clean = newName.trim().replace(/[\\/:*?"<>|#%]/g, "-").replace(/\s+/g, " ").slice(0, 80);
+  const clean = newName.trim().replace(/[\r\n]/g, " ").replace(/\s+/g, " ").slice(0, 80);
   if (!clean) throw new Error("圖片名稱不能空白");
-  return `${clean}${extension}`;
+  return `mumu-name-${encodeDisplayName(clean)}-${Date.now()}${extension}`;
 }
 
 async function renameCloudImage(oldPath, newPath) {
@@ -37,8 +62,8 @@ async function enableCloudImageRename() {
     const actions = card.querySelector(".image-card-actions");
     if (!input || !actions || actions.querySelector(".rename-image-button")) return;
 
-    const originalDisplayName = input.value;
-    const oldPath = imagePathFromDisplayName(originalDisplayName, items);
+    const originalDisplayNameValue = input.value;
+    const oldPath = imagePathFromDisplayName(originalDisplayNameValue, items);
     if (!oldPath) return;
 
     const rename = document.createElement("button");
@@ -56,11 +81,6 @@ async function enableCloudImageRename() {
 
       try {
         const newPath = renamedImagePath(oldPath, input.value);
-        if (newPath === oldPath) {
-          input.readOnly = true;
-          rename.textContent = "改名";
-          return;
-        }
         imageSaveStatus.textContent = "正在更新雲端圖片名稱…";
         rename.disabled = true;
         await renameCloudImage(oldPath, newPath);
@@ -68,7 +88,7 @@ async function enableCloudImageRename() {
         await renderImages();
       } catch (error) {
         console.error(error);
-        input.value = originalDisplayName;
+        input.value = originalDisplayNameValue;
         input.readOnly = true;
         rename.textContent = "改名";
         rename.disabled = false;
@@ -83,4 +103,7 @@ const renameObserver = new MutationObserver(() => {
   enableCloudImageRename().catch((error) => console.error(error));
 });
 renameObserver.observe(imageGrid, { childList: true });
-enableCloudImageRename().catch((error) => console.error(error));
+
+renderImages()
+  .then(() => enableCloudImageRename())
+  .catch((error) => console.error(error));
