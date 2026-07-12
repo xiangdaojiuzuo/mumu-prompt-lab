@@ -21,8 +21,17 @@ function displayName(path) {
   return path.replace(/\.[^.]+$/, "").replace(/^mumu-\d+-/, "沐沐母卡-");
 }
 
-function publicImageUrl(path) {
-  return `${SUPABASE_URL}/storage/v1/object/public/${IMAGE_BUCKET}/${encodeURIComponent(path)}`;
+async function signedImageUrl(path) {
+  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${IMAGE_BUCKET}/${encodeURIComponent(path)}`, {
+    method: "POST",
+    headers: { ...storageHeaders, "Content-Type": "application/json" },
+    body: JSON.stringify({ expiresIn: 3600 })
+  });
+  if (!response.ok) throw new Error(`建立圖片網址失敗：${await response.text()}`);
+  const data = await response.json();
+  const signedPath = data.signedURL || data.signedUrl || data.signed_url;
+  if (!signedPath) throw new Error("Supabase 未回傳圖片網址");
+  return signedPath.startsWith("http") ? signedPath : `${SUPABASE_URL}/storage/v1${signedPath}`;
 }
 
 async function getImages() {
@@ -71,8 +80,8 @@ async function renderImages() {
   }
 
   imageGrid.innerHTML = "";
-  images.forEach((item) => {
-    const url = publicImageUrl(item.path);
+  for (const item of images) {
+    const url = await signedImageUrl(item.path);
     const card = document.createElement("article");
     card.className = "image-card";
     const img = document.createElement("img");
@@ -96,7 +105,7 @@ async function renderImages() {
     body.append(name, actions);
     card.append(img, body);
     imageGrid.append(card);
-  });
+  }
 }
 
 async function handleFiles(files) {
@@ -104,7 +113,7 @@ async function handleFiles(files) {
     await addImages(files);
   } catch (error) {
     console.error(error);
-    imageSaveStatus.textContent = "圖片上傳失敗，請檢查 Supabase Storage 權限";
+    imageSaveStatus.textContent = `圖片處理失敗：${error.message}`;
   }
 }
 
@@ -127,5 +136,5 @@ imageDrop.addEventListener("drop", async (event) => handleFiles(event.dataTransf
 
 renderImages().catch((error) => {
   console.error(error);
-  imageGrid.innerHTML = '<p class="empty-images">無法讀取沐沐雲端圖片庫，請檢查 Supabase Storage 權限。</p>';
+  imageGrid.innerHTML = `<p class="empty-images">圖片庫讀取失敗：${error.message}</p>`;
 });
