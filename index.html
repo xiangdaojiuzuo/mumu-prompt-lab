@@ -9,13 +9,13 @@
 <body>
 <main class="app-shell">
   <header class="hero">
-    <div><p class="eyebrow">Mumu Prompt Lab</p><h1>沐沐提示詞管理器</h1><p class="hero-copy">選擇模式、平台與卡片後，即時組合完整提示詞並一鍵複製。提示詞與圖片資料保存在此瀏覽器。</p></div>
+    <div><p class="eyebrow">Mumu Prompt Lab</p><h1>沐沐提示詞管理器</h1><p class="hero-copy">選擇模式、平台與卡片後，即時組合完整提示詞並一鍵複製。提示詞保存在此瀏覽器，母卡圖片同步至雲端圖片庫。</p></div>
     <div class="hero-actions"><button id="resetDataButton" class="ghost-button" type="button">重設預設資料</button><button id="clearSelectionButton" class="ghost-button" type="button">清空選擇</button></div>
   </header>
   <section class="status-bar" aria-live="polite"><span id="saveStatus">資料已就緒</span><span id="copyStatus"></span></section>
   <section class="image-library panel-card" aria-label="母卡圖片庫">
-    <div class="section-title"><div><p class="eyebrow">Reference Images</p><h2>母卡圖片庫</h2></div><p>直接丟圖片進來，會儲存在這台裝置的瀏覽器。可新增多張、命名、預覽與刪除。</p></div>
-    <label class="image-drop" id="imageDrop" for="imageInput"><strong>點這裡選圖片，或把圖片拖進來</strong><span>支援 JPG、PNG、WEBP；圖片只存在你的瀏覽器，不會上傳到 GitHub。</span><input id="imageInput" type="file" accept="image/*" multiple /></label>
+    <div class="section-title"><div><p class="eyebrow">Reference Images</p><h2>母卡圖片庫</h2></div><p>直接丟圖片進來，會儲存到沐沐雲端圖片庫。電腦與手機開啟同一網站即可看到同一批圖片。</p></div>
+    <label class="image-drop" id="imageDrop" for="imageInput"><strong>點這裡選圖片，或把圖片拖進來</strong><span>支援 JPG、PNG、WEBP；圖片會上傳到 Supabase 雲端圖片庫。</span><input id="imageInput" type="file" accept="image/*" multiple /></label>
     <div id="imageGrid" class="image-grid"></div>
   </section>
   <section class="workspace" aria-label="提示詞組合工作區">
@@ -36,6 +36,6 @@
   </section>
 </main>
 <script src="app.js?v=3"></script>
-<script src="image-library.js?v=1"></script>
+<script src="image-library.js?v=2"></script>
 </body>
 </html>
