@@ -5,7 +5,7 @@ const IMAGE_BUCKET = "mumu-images";
 const imageInput = document.querySelector("#imageInput");
 const imageGrid = document.querySelector("#imageGrid");
 const imageDrop = document.querySelector("#imageDrop");
-const saveStatus = document.querySelector("#saveStatus");
+const imageSaveStatus = document.querySelector("#saveStatus");
 
 const storageHeaders = {
   apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -45,7 +45,7 @@ async function addImages(files) {
   const valid = [...files].filter((file) => file.type.startsWith("image/"));
   if (!valid.length) return;
 
-  saveStatus.textContent = `正在上傳 ${valid.length} 張圖片到雲端…`;
+  imageSaveStatus.textContent = `正在上傳 ${valid.length} 張圖片到雲端…`;
   let uploaded = 0;
   for (const file of valid) {
     const path = safeFileName(file);
@@ -58,7 +58,7 @@ async function addImages(files) {
     uploaded += 1;
   }
 
-  saveStatus.textContent = `已上傳 ${uploaded} 張圖片到沐沐雲端圖片庫`;
+  imageSaveStatus.textContent = `已上傳 ${uploaded} 張圖片到沐沐雲端圖片庫`;
   await renderImages();
 }
 
@@ -104,7 +104,7 @@ async function handleFiles(files) {
     await addImages(files);
   } catch (error) {
     console.error(error);
-    saveStatus.textContent = "圖片上傳失敗，請檢查 Supabase Storage 權限";
+    imageSaveStatus.textContent = "圖片上傳失敗，請檢查 Supabase Storage 權限";
   }
 }
 
