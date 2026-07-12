@@ -1,92 +1,43 @@
 <!doctype html>
 <html lang="zh-Hant">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>沐沐提示詞管理器</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <main class="app-shell">
-      <header class="hero">
-        <div>
-          <p class="eyebrow">Mumu Prompt Lab</p>
-          <h1>沐沐提示詞管理器</h1>
-          <p class="hero-copy">選擇模式、平台與卡片後，即時組合完整提示詞並一鍵複製。資料會保存在此瀏覽器的 localStorage。</p>
-        </div>
-        <div class="hero-actions">
-          <button id="resetDataButton" class="ghost-button" type="button">重設預設資料</button>
-          <button id="clearSelectionButton" class="ghost-button" type="button">清空選擇</button>
-        </div>
-      </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>沐沐提示詞管理器</title>
+  <link rel="stylesheet" href="styles.css?v=3" />
+</head>
+<body>
+<main class="app-shell">
+  <header class="hero">
+    <div><p class="eyebrow">Mumu Prompt Lab</p><h1>沐沐提示詞管理器</h1><p class="hero-copy">選擇模式、平台與卡片後，即時組合完整提示詞並一鍵複製。提示詞與圖片資料保存在此瀏覽器。</p></div>
+    <div class="hero-actions"><button id="resetDataButton" class="ghost-button" type="button">重設預設資料</button><button id="clearSelectionButton" class="ghost-button" type="button">清空選擇</button></div>
+  </header>
+  <section class="status-bar" aria-live="polite"><span id="saveStatus">資料已就緒</span><span id="copyStatus"></span></section>
 
-      <section class="status-bar" aria-live="polite">
-        <span id="saveStatus">資料已就緒</span>
-        <span id="copyStatus"></span>
-      </section>
+  <section class="image-library panel-card" aria-label="母卡圖片庫">
+    <div class="section-title"><div><p class="eyebrow">Reference Images</p><h2>母卡圖片庫</h2></div><p>直接丟圖片進來，會儲存在這台裝置的瀏覽器。可新增多張、命名、預覽與刪除。</p></div>
+    <label class="image-drop" id="imageDrop" for="imageInput"><strong>點這裡選圖片，或把圖片拖進來</strong><span>支援 JPG、PNG、WEBP；圖片只存在你的瀏覽器，不會上傳到 GitHub。</span><input id="imageInput" type="file" accept="image/*" multiple /></label>
+    <div id="imageGrid" class="image-grid"></div>
+  </section>
 
-      <section class="workspace" aria-label="提示詞組合工作區">
-        <form class="control-panel" id="builderForm">
-          <section class="panel-card">
-            <h2>基本設定</h2>
-            <div class="segmented" role="group" aria-label="模式切換">
-              <label><input type="radio" name="mode" value="image" checked /> <span>生圖</span></label>
-              <label><input type="radio" name="mode" value="video" /> <span>生影片</span></label>
-            </div>
-            <label class="field-label" for="platformSelect">平台</label>
-            <select id="platformSelect" name="platform">
-              <option value="ChatGPT">ChatGPT</option>
-              <option value="Grok">Grok</option>
-              <option value="Flow">Flow</option>
-              <option value="Veo">Veo</option>
-            </select>
-          </section>
+  <section class="workspace" aria-label="提示詞組合工作區">
+    <form class="control-panel" id="builderForm">
+      <section class="panel-card"><h2>基本設定</h2><div class="segmented" role="group" aria-label="模式切換"><label><input type="radio" name="mode" value="image" checked /><span>生圖</span></label><label><input type="radio" name="mode" value="video" /><span>生影片</span></label></div><label class="field-label" for="platformSelect">平台</label><select id="platformSelect" name="platform"><option>ChatGPT</option><option>Grok</option><option>Flow</option><option>Veo</option></select></section>
+      <section class="panel-card"><h2>卡片選擇</h2><div id="selectors" class="selector-grid"></div></section>
+    </form>
+    <section class="output-panel" aria-label="提示詞輸出">
+      <article class="prompt-card"><div class="prompt-heading"><h2>正向提示詞</h2><button class="copy-button" data-copy="positive" type="button">複製</button></div><textarea id="positiveOutput" readonly></textarea></article>
+      <article class="prompt-card"><div class="prompt-heading"><h2>負向提示詞</h2><button class="copy-button" data-copy="negative" type="button">複製</button></div><textarea id="negativeOutput" readonly></textarea></article>
+      <article class="prompt-card full-prompt"><div class="prompt-heading"><h2>完整提示詞</h2><button class="copy-button primary" data-copy="full" type="button">複製完整提示詞</button></div><textarea id="fullOutput" readonly></textarea></article>
+    </section>
+  </section>
 
-          <section class="panel-card">
-            <h2>卡片選擇</h2>
-            <div id="selectors" class="selector-grid"></div>
-          </section>
-        </form>
-
-        <section class="output-panel" aria-label="提示詞輸出">
-          <article class="prompt-card">
-            <div class="prompt-heading"><h2>正向提示詞</h2><button class="copy-button" data-copy="positive" type="button">複製</button></div>
-            <textarea id="positiveOutput" readonly></textarea>
-          </article>
-          <article class="prompt-card">
-            <div class="prompt-heading"><h2>負向提示詞</h2><button class="copy-button" data-copy="negative" type="button">複製</button></div>
-            <textarea id="negativeOutput" readonly></textarea>
-          </article>
-          <article class="prompt-card full-prompt">
-            <div class="prompt-heading"><h2>完整提示詞</h2><button class="copy-button primary" data-copy="full" type="button">複製完整提示詞</button></div>
-            <textarea id="fullOutput" readonly></textarea>
-          </article>
-        </section>
-      </section>
-
-      <section class="manager panel-card" aria-label="卡片管理">
-        <div class="section-title">
-          <div>
-            <p class="eyebrow">Card Manager</p>
-            <h2>卡片管理</h2>
-          </div>
-          <p>可新增、編輯、刪除沐沐母卡、角度卡、表情卡、服裝卡與場景卡。</p>
-        </div>
-        <form id="cardForm" class="card-form">
-          <input type="hidden" id="cardId" />
-          <label>卡片類型<select id="cardType" required></select></label>
-          <label>卡片名稱<input id="cardName" required placeholder="例如：甜甜微笑" /></label>
-          <label>正向提示詞<textarea id="cardPositive" required placeholder="輸入會加入正向提示詞的內容"></textarea></label>
-          <label>負向提示詞<textarea id="cardNegative" placeholder="選填，輸入要避免的內容"></textarea></label>
-          <div class="form-actions">
-            <button class="primary" type="submit">儲存卡片</button>
-            <button id="cancelEditButton" class="ghost-button" type="button">取消編輯</button>
-          </div>
-        </form>
-        <div id="cardLists" class="card-lists"></div>
-      </section>
-    </main>
-
-    <script src="app.js"></script>
-  </body>
+  <section class="manager panel-card" aria-label="卡片管理">
+    <div class="section-title"><div><p class="eyebrow">Card Manager</p><h2>卡片管理</h2></div><p>可新增、編輯、刪除角色設定、角度卡、表情卡、服裝卡與場景卡。</p></div>
+    <form id="cardForm" class="card-form"><input type="hidden" id="cardId" /><label>卡片類型<select id="cardType" required></select></label><label>卡片名稱<input id="cardName" required placeholder="例如：甜甜微笑" /></label><label>正向提示詞<textarea id="cardPositive" required placeholder="輸入會加入正向提示詞的內容"></textarea></label><label>負向提示詞<textarea id="cardNegative" placeholder="選填，輸入要避免的內容"></textarea></label><div class="form-actions"><button class="primary" type="submit">儲存卡片</button><button id="cancelEditButton" class="ghost-button" type="button">取消編輯</button></div></form>
+    <div id="cardLists" class="card-lists"></div>
+  </section>
+</main>
+<script src="app.js?v=3"></script>
+</body>
 </html>
