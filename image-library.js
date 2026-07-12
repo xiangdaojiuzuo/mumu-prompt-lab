@@ -53,7 +53,6 @@ async function getImages() {
 async function addImages(files) {
   const valid = [...files].filter((file) => file.type.startsWith("image/"));
   if (!valid.length) return;
-
   imageSaveStatus.textContent = `正在上傳 ${valid.length} 張圖片到雲端…`;
   let uploaded = 0;
   for (const file of valid) {
@@ -66,9 +65,16 @@ async function addImages(files) {
     if (!response.ok) throw new Error(`上傳失敗：${await response.text()}`);
     uploaded += 1;
   }
-
   imageSaveStatus.textContent = `已上傳 ${uploaded} 張圖片到沐沐雲端圖片庫`;
   await renderImages();
+}
+
+async function deleteImage(path) {
+  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${IMAGE_BUCKET}/${encodeURIComponent(path)}`, {
+    method: "DELETE",
+    headers: storageHeaders
+  });
+  if (!response.ok) throw new Error(`刪除失敗：${await response.text()}`);
 }
 
 async function renderImages() {
@@ -78,7 +84,6 @@ async function renderImages() {
     imageGrid.innerHTML = '<p class="empty-images">雲端還沒有圖片。把真正的沐沐母卡丟進上面就好 😆</p>';
     return;
   }
-
   imageGrid.innerHTML = "";
   for (const item of images) {
     const url = await signedImageUrl(item.path);
@@ -101,7 +106,22 @@ async function renderImages() {
     view.type = "button";
     view.textContent = "看大圖";
     view.addEventListener("click", () => window.open(url, "_blank"));
-    actions.append(view);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "刪除";
+    remove.addEventListener("click", async () => {
+      if (!confirm(`確定刪除「${item.name}」？`)) return;
+      try {
+        imageSaveStatus.textContent = "正在刪除雲端圖片…";
+        await deleteImage(item.path);
+        imageSaveStatus.textContent = "雲端圖片已刪除";
+        await renderImages();
+      } catch (error) {
+        console.error(error);
+        imageSaveStatus.textContent = `圖片刪除失敗：${error.message}`;
+      }
+    });
+    actions.append(view, remove);
     body.append(name, actions);
     card.append(img, body);
     imageGrid.append(card);
