@@ -9,13 +9,25 @@ function renamedImagePath(oldPath, newName) {
   return `${clean}${extension}`;
 }
 
-async function moveCloudImage(oldPath, newPath) {
-  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/move`, {
+async function renameCloudImage(oldPath, newPath) {
+  const sourceUrl = await signedImageUrl(oldPath);
+  const sourceResponse = await fetch(sourceUrl);
+  if (!sourceResponse.ok) throw new Error(`讀取原圖失敗：${await sourceResponse.text()}`);
+  const blob = await sourceResponse.blob();
+
+  const uploadResponse = await fetch(`${SUPABASE_URL}/storage/v1/object/${IMAGE_BUCKET}/${encodeURIComponent(newPath)}`, {
     method: "POST",
-    headers: { ...storageHeaders, "Content-Type": "application/json" },
-    body: JSON.stringify({ bucketId: IMAGE_BUCKET, sourceKey: oldPath, destinationKey: newPath })
+    headers: { ...storageHeaders, "Content-Type": blob.type || "application/octet-stream", "x-upsert": "false" },
+    body: blob
   });
-  if (!response.ok) throw new Error(`改名失敗：${await response.text()}`);
+  if (!uploadResponse.ok) throw new Error(`建立新名稱失敗：${await uploadResponse.text()}`);
+
+  try {
+    await deleteImage(oldPath);
+  } catch (error) {
+    await deleteImage(newPath).catch(() => {});
+    throw error;
+  }
 }
 
 async function enableCloudImageRename() {
@@ -50,11 +62,16 @@ async function enableCloudImageRename() {
           return;
         }
         imageSaveStatus.textContent = "正在更新雲端圖片名稱…";
-        await moveCloudImage(oldPath, newPath);
+        rename.disabled = true;
+        await renameCloudImage(oldPath, newPath);
         imageSaveStatus.textContent = "雲端圖片名稱已更新";
         await renderImages();
       } catch (error) {
         console.error(error);
+        input.value = originalDisplayName;
+        input.readOnly = true;
+        rename.textContent = "改名";
+        rename.disabled = false;
         imageSaveStatus.textContent = `圖片改名失敗：${error.message}`;
       }
     });
