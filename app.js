@@ -1,4 +1,7 @@
 const STORAGE_KEY = "mumu-prompt-manager-v2";
+const CARD_SUPABASE_URL = "https://oeotcilwmjcvrryoenqb.supabase.co";
+const CARD_SUPABASE_KEY = "sb_publishable_K_7F9bwnDLf-w9AbDd8elg_-yQaXpaj";
+const CARD_TABLE = "prompt_cards";
 const typeLabels = {
   character: "沐沐母卡",
   angle: "角度卡",
@@ -15,13 +18,11 @@ const defaultCards = [
     positive: "沐沐，22歲明確成年東亞女性，163cm，日系甜感、自然學妹感。小圓臉、短下巴、柔和下顎線、大而自然有神的眼睛、自然蘋果肌，五官比例柔和年輕，乾淨淡妝。深棕色長直柔順頭髮，空氣瀏海。自然真實女性曲線，身體比例平衡，胸型以自然D罩杯比例為一致性基準，腰身自然收束但不過度纖細，整體具有真實厚度、柔和重量感與符合重力的身體線條。保持同一位沐沐的臉部幾何、臉型比例、眼距、眼型與整體角色辨識度一致",
     negative: "成熟阿姨感，成熟模特臉，歐美銳利五官，明星臉，名媛感，伸長臉型，長下巴，尖銳下顎，厭世臉，塑膠臉，過度幼化，未成年外觀，角色換臉，臉部漂移，眼距改變，身形縮水，胸型比例明顯改變，不自然極細腰，失真身體比例"
   },
-
   { id: "angle-front", type: "angle", name: "正面", positive: "正面視角，人物面向鏡頭，保持自然真實透視", negative: "擅自改成側面或背面，臉部透視變形" },
   { id: "angle-left45", type: "angle", name: "左45度", positive: "人物呈左側斜45度視角，保持左45度角度與自然臉部輪廓", negative: "擅自補成正面，切換右45度，角度漂移" },
   { id: "angle-right45", type: "angle", name: "右45度", positive: "人物呈右側斜45度視角，保持右45度角度與自然臉部輪廓", negative: "擅自補成正面，切換左45度，角度漂移" },
   { id: "angle-left-profile", type: "angle", name: "左側面", positive: "左側面視角，清楚保留側臉輪廓，鏡頭維持側面", negative: "擅自轉正面，右側面，鏡頭繞到人物正前方" },
   { id: "angle-right-profile", type: "angle", name: "右側面", positive: "右側面視角，清楚保留側臉輪廓，鏡頭維持側面", negative: "擅自轉正面，左側面，鏡頭繞到人物正前方" },
-
   { id: "expression-smile", type: "expression", name: "微笑", positive: "自然溫柔的甜甜微笑，眼神柔和，表情放鬆", negative: "僵硬假笑，誇張嘴型，空洞眼神" },
   { id: "expression-happy", type: "expression", name: "開心", positive: "明顯開心的表情，眼神明亮，帶自然活力與學妹感", negative: "表情僵硬，過度誇張，失控顏藝" },
   { id: "expression-surprised", type: "expression", name: "驚喜", positive: "自然驚喜的表情，眼睛微微睜大，情緒明亮真實", negative: "驚恐，恐怖表情，過度張嘴" },
@@ -31,10 +32,8 @@ const defaultCards = [
   { id: "expression-focused", type: "expression", name: "專注", positive: "專注認真的神情，視線自然集中，表情平靜", negative: "呆滯，空洞眼神，憤怒皺眉" },
   { id: "expression-sleepy", type: "expression", name: "困", positive: "自然微睏的表情，眼神略微慵懶，保留清新柔和感", negative: "病態，憔悴，黑眼圈過重" },
   { id: "expression-laugh", type: "expression", name: "笑出聲", positive: "自然笑出聲的瞬間，開心活潑，表情生動且真實", negative: "嘴型崩壞，牙齒變形，失控顏藝" },
-
   { id: "outfit-official-v3", type: "outfit", name: "官方母卡穿搭 v3.0", positive: "白色羅紋背心，淺藍色襯衫自然披掛於外層，高腰牛仔短褲，白色休閒鞋；衣料呈現自然張力、皺褶與垂墜，符合身形與重力", negative: "服裝款式擅自改變，淺藍襯衫消失，不合理緊身塑膠布料，衣料黏死身體" },
   { id: "outfit-home", type: "outfit", name: "沐沐居家休閒", positive: "舒適自然的日系居家休閒穿搭，柔軟輕盈布料，乾淨簡約，保留沐沐年輕自然的生活感；衣料有真實皺褶、張力與垂墜", negative: "正式晚宴服，職業制服，過度華麗配件，塑膠感布料" },
-
   { id: "scene-cream-room", type: "scene", name: "沐沐奶油白房間", positive: "沐沐的奶油白房間，乾淨溫暖的日系生活空間，柔和自然光，米白與奶油色調，真實居家細節，背景不搶人物", negative: "豪華宮殿，陰暗恐怖房間，雜亂垃圾，過度空洞攝影棚" },
   { id: "scene-entry", type: "scene", name: "玄關", positive: "沐沐家玄關區域，乾淨自然的日系居家生活感，真實室內光線與生活細節", negative: "飯店大廳，商場，豪宅宮殿" },
   { id: "scene-living", type: "scene", name: "客廳", positive: "沐沐家客廳，溫暖乾淨、舒適自然的日系生活空間，柔和居家光線", negative: "攝影棚背景，辦公室，豪華宴會廳" },
@@ -64,31 +63,63 @@ const modeHints = {
   },
 };
 
-let state = loadState();
-
+let state = loadLocalState();
 const selectors = document.querySelector("#selectors");
 const cardLists = document.querySelector("#cardLists");
 const cardType = document.querySelector("#cardType");
 const saveStatus = document.querySelector("#saveStatus");
 const copyStatus = document.querySelector("#copyStatus");
 
-function loadState() {
-  const fallback = { cards: defaultCards, selections: {}, mode: "image", platform: "ChatGPT" };
+const cardHeaders = {
+  apikey: CARD_SUPABASE_KEY,
+  Authorization: `Bearer ${CARD_SUPABASE_KEY}`,
+  "Content-Type": "application/json"
+};
+
+function loadLocalState() {
+  const fallback = { cards: [], selections: {}, mode: "image", platform: "ChatGPT" };
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return stored?.cards ? { ...fallback, ...stored } : fallback;
+    return { ...fallback, selections: stored?.selections || {}, mode: stored?.mode || "image", platform: stored?.platform || "ChatGPT" };
   } catch {
     return fallback;
   }
 }
 
-function persist(message = "資料已自動保存") {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function persistLocal(message = "選擇已保存") {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ selections: state.selections, mode: state.mode, platform: state.platform }));
   saveStatus.textContent = message;
 }
 
+function normalizeCard(card) { return { ...card, id: String(card.id), negative: card.negative || "" }; }
+
+async function cardRequest(path = "", options = {}) {
+  const response = await fetch(`${CARD_SUPABASE_URL}/rest/v1/${CARD_TABLE}${path}`, {
+    ...options,
+    headers: { ...cardHeaders, ...(options.headers || {}) }
+  });
+  if (!response.ok) throw new Error(await response.text());
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function loadCloudCards() {
+  let cards = await cardRequest("?select=id,type,name,positive,negative&order=id.asc");
+  if (!cards.length) {
+    saveStatus.textContent = "正在建立沐沐官方雲端卡片…";
+    const seed = defaultCards.map(({ type, name, positive, negative }) => ({ type, name, positive, negative }));
+    cards = await cardRequest("", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(seed) });
+  }
+  state.cards = cards.map(normalizeCard);
+  Object.keys(state.selections).forEach((type) => {
+    if (!state.cards.some((card) => card.id === String(state.selections[type]))) state.selections[type] = "";
+  });
+  persistLocal("沐沐雲端卡片已同步");
+}
+
 function byType(type) { return state.cards.filter((card) => card.type === type); }
-function selectedCards() { return Object.keys(typeLabels).map((type) => state.cards.find((card) => card.id === state.selections[type])).filter(Boolean); }
+function selectedCards() { return Object.keys(typeLabels).map((type) => state.cards.find((card) => card.id === String(state.selections[type]))).filter(Boolean); }
 
 function buildPrompt() {
   const cards = selectedCards();
@@ -108,7 +139,7 @@ function buildPrompt() {
 
 function renderSelectors() {
   selectors.innerHTML = Object.entries(typeLabels).map(([type, label]) => {
-    const options = byType(type).map((card) => `<option value="${card.id}" ${state.selections[type] === card.id ? "selected" : ""}>${escapeHtml(card.name)}</option>`).join("");
+    const options = byType(type).map((card) => `<option value="${card.id}" ${String(state.selections[type] || "") === card.id ? "selected" : ""}>${escapeHtml(card.name)}</option>`).join("");
     return `<label>${label}<select data-selector="${type}"><option value="">不選擇</option>${options}</select></label>`;
   }).join("");
 }
@@ -155,13 +186,13 @@ selectors.addEventListener("change", (event) => {
   const type = event.target.dataset.selector;
   if (!type) return;
   state.selections[type] = event.target.value;
-  persist(); renderOutputs();
+  persistLocal(); renderOutputs();
 });
 
 document.querySelector("#builderForm").addEventListener("change", (event) => {
   if (event.target.name === "mode") state.mode = event.target.value;
   if (event.target.name === "platform") state.platform = event.target.value;
-  persist(); renderOutputs();
+  persistLocal(); renderOutputs();
 });
 
 document.querySelectorAll(".copy-button").forEach((button) => button.addEventListener("click", async () => {
@@ -172,37 +203,61 @@ document.querySelectorAll(".copy-button").forEach((button) => button.addEventLis
 }));
 
 document.querySelector("#clearSelectionButton").addEventListener("click", () => {
-  state.selections = {}; persist("已清空目前選擇"); renderAll();
+  state.selections = {}; persistLocal("已清空目前選擇"); renderAll();
 });
 
-document.querySelector("#resetDataButton").addEventListener("click", () => {
-  if (!confirm("確定要重設為預設資料？這會覆蓋目前卡片。")) return;
-  state = { cards: defaultCards, selections: {}, mode: "image", platform: "ChatGPT" };
-  persist("已重設為沐沐官方預設資料"); resetForm(); renderAll();
+document.querySelector("#resetDataButton").addEventListener("click", async () => {
+  if (!confirm("確定要重設為預設資料？這會覆蓋雲端卡片。")) return;
+  try {
+    saveStatus.textContent = "正在重設沐沐雲端卡片…";
+    await cardRequest("?id=gt.0", { method: "DELETE" });
+    const seed = defaultCards.map(({ type, name, positive, negative }) => ({ type, name, positive, negative }));
+    const cards = await cardRequest("", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(seed) });
+    state.cards = cards.map(normalizeCard);
+    state.selections = {};
+    persistLocal("已重設為沐沐官方雲端資料"); resetForm(); renderAll();
+  } catch (error) {
+    console.error(error);
+    saveStatus.textContent = `重設失敗：${error.message}`;
+  }
 });
 
-document.querySelector("#cardForm").addEventListener("submit", (event) => {
+document.querySelector("#cardForm").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const id = document.querySelector("#cardId").value || `card-${Date.now()}`;
+  const id = document.querySelector("#cardId").value;
   const card = {
-    id,
     type: document.querySelector("#cardType").value,
     name: document.querySelector("#cardName").value.trim(),
     positive: document.querySelector("#cardPositive").value.trim(),
     negative: document.querySelector("#cardNegative").value.trim(),
   };
-  const index = state.cards.findIndex((item) => item.id === id);
-  if (index >= 0) state.cards[index] = card; else state.cards.push(card);
-  persist("卡片已保存"); resetForm(); renderAll();
+  try {
+    saveStatus.textContent = id ? "正在更新雲端卡片…" : "正在新增雲端卡片…";
+    let saved;
+    if (id) {
+      saved = await cardRequest(`?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(card) });
+      const index = state.cards.findIndex((item) => item.id === id);
+      if (index >= 0 && saved[0]) state.cards[index] = normalizeCard(saved[0]);
+    } else {
+      saved = await cardRequest("", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(card) });
+      if (saved[0]) state.cards.push(normalizeCard(saved[0]));
+    }
+    saveStatus.textContent = "雲端卡片已保存";
+    resetForm(); renderAll();
+  } catch (error) {
+    console.error(error);
+    saveStatus.textContent = `卡片保存失敗：${error.message}`;
+  }
 });
 
 document.querySelector("#cancelEditButton").addEventListener("click", resetForm);
 
-cardLists.addEventListener("click", (event) => {
+cardLists.addEventListener("click", async (event) => {
   const editId = event.target.dataset.edit;
   const deleteId = event.target.dataset.delete;
   if (editId) {
     const card = state.cards.find((item) => item.id === editId);
+    if (!card) return;
     document.querySelector("#cardId").value = card.id;
     document.querySelector("#cardType").value = card.type;
     document.querySelector("#cardType").disabled = true;
@@ -212,11 +267,30 @@ cardLists.addEventListener("click", (event) => {
     window.scrollTo({ top: document.querySelector("#cardForm").offsetTop - 24, behavior: "smooth" });
   }
   if (deleteId && confirm("確定要刪除此卡片？")) {
-    state.cards = state.cards.filter((item) => item.id !== deleteId);
-    Object.keys(state.selections).forEach((type) => { if (state.selections[type] === deleteId) state.selections[type] = ""; });
-    persist("卡片已刪除"); renderAll();
+    try {
+      saveStatus.textContent = "正在刪除雲端卡片…";
+      await cardRequest(`?id=eq.${encodeURIComponent(deleteId)}`, { method: "DELETE" });
+      state.cards = state.cards.filter((item) => item.id !== deleteId);
+      Object.keys(state.selections).forEach((type) => { if (String(state.selections[type]) === deleteId) state.selections[type] = ""; });
+      persistLocal("雲端卡片已刪除"); renderAll();
+    } catch (error) {
+      console.error(error);
+      saveStatus.textContent = `卡片刪除失敗：${error.message}`;
+    }
   }
 });
 
-renderAll();
-persist("沐沐官方資料已就緒");
+async function initialize() {
+  saveStatus.textContent = "正在同步沐沐雲端卡片…";
+  try {
+    await loadCloudCards();
+    renderAll();
+  } catch (error) {
+    console.error(error);
+    state.cards = defaultCards;
+    renderAll();
+    saveStatus.textContent = `雲端卡片讀取失敗：${error.message}`;
+  }
+}
+
+initialize();
