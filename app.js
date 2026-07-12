@@ -1,4 +1,4 @@
-const STORAGE_KEY = "mumu-prompt-manager-v1";
+const STORAGE_KEY = "mumu-prompt-manager-v2";
 const typeLabels = {
   character: "沐沐母卡",
   angle: "角度卡",
@@ -8,30 +8,59 @@ const typeLabels = {
 };
 
 const defaultCards = [
-  { id: "character-soft", type: "character", name: "沐沐柔甜母卡", positive: "沐沐，甜美溫柔的年輕女性角色，柔順長髮，清澈眼神，細緻五官，乾淨自然膚色，親切可愛氣質，角色辨識度一致", negative: "五官變形，角色不一致，過度成熟，過度幼化" },
-  { id: "angle-front", type: "angle", name: "正面半身", positive: "正面視角，半身構圖，角色置中，鏡頭自然平視", negative: "奇怪視角，裁切頭部，構圖歪斜" },
-  { id: "expression-smile", type: "expression", name: "甜甜微笑", positive: "自然甜美微笑，眼神溫柔，表情放鬆且有親和力", negative: "僵硬表情，誇張笑容，空洞眼神" },
-  { id: "outfit-dress", type: "outfit", name: "白色洋裝", positive: "白色簡約洋裝，柔軟布料，清新乾淨，優雅可愛", negative: "服裝破損，過度暴露，不合理配件" },
-  { id: "scene-room", type: "scene", name: "晨光房間", positive: "溫暖晨光灑入的乾淨房間，柔和陰影，舒適生活感，背景簡潔", negative: "背景雜亂，低光噪點，陰暗壓迫" },
+  {
+    id: "character-mumu-official-v3",
+    type: "character",
+    name: "沐沐官方母卡 v3.0",
+    positive: "沐沐，22歲明確成年東亞女性，163cm，日系甜感、自然學妹感。小圓臉、短下巴、柔和下顎線、大而自然有神的眼睛、自然蘋果肌，五官比例柔和年輕，乾淨淡妝。深棕色長直柔順頭髮，空氣瀏海。自然真實女性曲線，身體比例平衡，胸型以自然D罩杯比例為一致性基準，腰身自然收束但不過度纖細，整體具有真實厚度、柔和重量感與符合重力的身體線條。保持同一位沐沐的臉部幾何、臉型比例、眼距、眼型與整體角色辨識度一致",
+    negative: "成熟阿姨感，成熟模特臉，歐美銳利五官，明星臉，名媛感，伸長臉型，長下巴，尖銳下顎，厭世臉，塑膠臉，過度幼化，未成年外觀，角色換臉，臉部漂移，眼距改變，身形縮水，胸型比例明顯改變，不自然極細腰，失真身體比例"
+  },
+
+  { id: "angle-front", type: "angle", name: "正面", positive: "正面視角，人物面向鏡頭，保持自然真實透視", negative: "擅自改成側面或背面，臉部透視變形" },
+  { id: "angle-left45", type: "angle", name: "左45度", positive: "人物呈左側斜45度視角，保持左45度角度與自然臉部輪廓", negative: "擅自補成正面，切換右45度，角度漂移" },
+  { id: "angle-right45", type: "angle", name: "右45度", positive: "人物呈右側斜45度視角，保持右45度角度與自然臉部輪廓", negative: "擅自補成正面，切換左45度，角度漂移" },
+  { id: "angle-left-profile", type: "angle", name: "左側面", positive: "左側面視角，清楚保留側臉輪廓，鏡頭維持側面", negative: "擅自轉正面，右側面，鏡頭繞到人物正前方" },
+  { id: "angle-right-profile", type: "angle", name: "右側面", positive: "右側面視角，清楚保留側臉輪廓，鏡頭維持側面", negative: "擅自轉正面，左側面，鏡頭繞到人物正前方" },
+
+  { id: "expression-smile", type: "expression", name: "微笑", positive: "自然溫柔的甜甜微笑，眼神柔和，表情放鬆", negative: "僵硬假笑，誇張嘴型，空洞眼神" },
+  { id: "expression-happy", type: "expression", name: "開心", positive: "明顯開心的表情，眼神明亮，帶自然活力與學妹感", negative: "表情僵硬，過度誇張，失控顏藝" },
+  { id: "expression-surprised", type: "expression", name: "驚喜", positive: "自然驚喜的表情，眼睛微微睜大，情緒明亮真實", negative: "驚恐，恐怖表情，過度張嘴" },
+  { id: "expression-aggrieved", type: "expression", name: "委屈", positive: "輕微委屈的表情，眼神柔軟，帶一點撒嬌感", negative: "嚎啕大哭，恐怖哭臉，五官扭曲" },
+  { id: "expression-shy", type: "expression", name: "害羞", positive: "自然害羞的表情，眼神略帶閃躲，淡淡靦腆感", negative: "過度臉紅，低俗表情，誇張顏藝" },
+  { id: "expression-coquettish", type: "expression", name: "撒嬌", positive: "自然可愛的撒嬌表情，溫暖眼神，親近的女友感", negative: "幼兒化，過度做作，誇張嘟嘴" },
+  { id: "expression-focused", type: "expression", name: "專注", positive: "專注認真的神情，視線自然集中，表情平靜", negative: "呆滯，空洞眼神，憤怒皺眉" },
+  { id: "expression-sleepy", type: "expression", name: "困", positive: "自然微睏的表情，眼神略微慵懶，保留清新柔和感", negative: "病態，憔悴，黑眼圈過重" },
+  { id: "expression-laugh", type: "expression", name: "笑出聲", positive: "自然笑出聲的瞬間，開心活潑，表情生動且真實", negative: "嘴型崩壞，牙齒變形，失控顏藝" },
+
+  { id: "outfit-official-v3", type: "outfit", name: "官方母卡穿搭 v3.0", positive: "白色羅紋背心，淺藍色襯衫自然披掛於外層，高腰牛仔短褲，白色休閒鞋；衣料呈現自然張力、皺褶與垂墜，符合身形與重力", negative: "服裝款式擅自改變，淺藍襯衫消失，不合理緊身塑膠布料，衣料黏死身體" },
+  { id: "outfit-home", type: "outfit", name: "沐沐居家休閒", positive: "舒適自然的日系居家休閒穿搭，柔軟輕盈布料，乾淨簡約，保留沐沐年輕自然的生活感；衣料有真實皺褶、張力與垂墜", negative: "正式晚宴服，職業制服，過度華麗配件，塑膠感布料" },
+
+  { id: "scene-cream-room", type: "scene", name: "沐沐奶油白房間", positive: "沐沐的奶油白房間，乾淨溫暖的日系生活空間，柔和自然光，米白與奶油色調，真實居家細節，背景不搶人物", negative: "豪華宮殿，陰暗恐怖房間，雜亂垃圾，過度空洞攝影棚" },
+  { id: "scene-entry", type: "scene", name: "玄關", positive: "沐沐家玄關區域，乾淨自然的日系居家生活感，真實室內光線與生活細節", negative: "飯店大廳，商場，豪宅宮殿" },
+  { id: "scene-living", type: "scene", name: "客廳", positive: "沐沐家客廳，溫暖乾淨、舒適自然的日系生活空間，柔和居家光線", negative: "攝影棚背景，辦公室，豪華宴會廳" },
+  { id: "scene-dining", type: "scene", name: "餐桌區", positive: "沐沐家餐桌區，真實居家餐桌與生活細節，乾淨溫暖，自然室內光線", negative: "高級餐廳，宴會廳，空無一物" },
+  { id: "scene-balcony", type: "scene", name: "陽台", positive: "沐沐家陽台，與居家空間連貫，自然日光與真實住宅生活感", negative: "飯店頂樓，豪華空中酒吧，奇幻場景" },
+  { id: "scene-dressing", type: "scene", name: "更衣區", positive: "沐沐家的更衣區，乾淨整齊的衣物收納與穿搭生活細節，柔和室內光線", negative: "服飾店，伸展台，豪華精品店" },
+  { id: "scene-bath-exterior", type: "scene", name: "衛浴外區", positive: "沐沐家衛浴外區，乾淨明亮、自然真實的住宅空間，柔和室內照明", negative: "公共澡堂，飯店SPA，陰暗空間" }
 ];
 
 const platformHints = {
-  ChatGPT: "請以清楚分段的方式輸出，保留角色一致性與細節描述。",
-  Grok: "請使用直接、精準且容易複製到生成工具的提示詞格式。",
-  Flow: "請強調場景連貫、鏡頭語言與視覺氛圍。",
-  Veo: "請強調影片動作、鏡頭運動、時間節奏與穩定畫面。",
+  ChatGPT: "使用自然繁體中文完整描述；優先維持沐沐身份、臉部與身形一致性，不要擅自替換人物設定。",
+  Grok: "使用直接、精準、可直接貼入生成器的完整提示詞；鎖定人物身份與身形，不擅自刪減關鍵設定。",
+  Flow: "以影片生成邏輯描述；明確固定人物、鏡頭角度、動作先後與場景連續性，避免模型自行補正視角。",
+  Veo: "以時間順序描述動作與鏡頭；強調角色一致、自然物理動態、穩定臉部與連續畫面。",
 };
 
 const modeHints = {
   image: {
     label: "生圖",
-    positive: "高品質，細節豐富，柔和光影，清晰構圖，精緻視覺效果",
-    negative: "低品質，模糊，噪點，比例錯誤，多餘手指，肢體扭曲，文字浮水印",
+    positive: "超寫實攝影，Photorealistic，Ultra realistic，Japanese lifestyle photography，documentary realism，真實皮膚紋理，自然光影，真實衣料物理，清晰構圖，人物身份一致性優先",
+    negative: "低品質，模糊，噪點，過度磨皮，塑膠皮膚，AI感，卡通化，比例錯誤，多餘手指，手部變形，肢體扭曲，文字，浮水印，重複人物",
   },
   video: {
     label: "生影片",
-    positive: "自然動作，穩定鏡頭，流暢運動，電影感光影，連貫時間節奏，角色一致性高",
-    negative: "畫面閃爍，臉部漂移，手部變形，動作破碎，鏡頭晃動，角色外觀跳變",
+    positive: "自然連續動作，真實物理與重力，穩定鏡頭，流暢運動，角色身份全程一致，臉部穩定，髮絲與衣料自然動態，電影感但保留真實生活攝影質感",
+    negative: "畫面閃爍，臉部漂移，換臉，人物變形，手部變形，動作破碎，瞬間位移，鏡頭亂繞，擅自補正面，角色外觀跳變，服裝突變，場景跳變",
   },
 };
 
@@ -58,28 +87,22 @@ function persist(message = "資料已自動保存") {
   saveStatus.textContent = message;
 }
 
-function byType(type) {
-  return state.cards.filter((card) => card.type === type);
-}
-
-function selectedCards() {
-  return Object.keys(typeLabels).map((type) => state.cards.find((card) => card.id === state.selections[type])).filter(Boolean);
-}
+function byType(type) { return state.cards.filter((card) => card.type === type); }
+function selectedCards() { return Object.keys(typeLabels).map((type) => state.cards.find((card) => card.id === state.selections[type])).filter(Boolean); }
 
 function buildPrompt() {
   const cards = selectedCards();
   const mode = modeHints[state.mode];
   const platform = state.platform;
   const positiveParts = [
-    `模式：${mode.label}`,
-    `平台：${platform}`,
-    platformHints[platform],
-    ...cards.map((card) => card.positive),
-    mode.positive,
+    `【用途】${mode.label}｜${platform}`,
+    `【平台規則】${platformHints[platform]}`,
+    ...cards.map((card) => `【${typeLabels[card.type]}｜${card.name}】${card.positive}`),
+    `【${mode.label}品質與穩定規則】${mode.positive}`,
   ].filter(Boolean);
   const negativeParts = [...cards.map((card) => card.negative), mode.negative].filter(Boolean);
-  const positive = positiveParts.join("，\n");
-  const negative = negativeParts.join("，\n");
+  const positive = positiveParts.join("\n\n");
+  const negative = [...new Set(negativeParts.join("，").split("，").map((part) => part.trim()).filter(Boolean))].join("，");
   return { positive, negative, full: `正向提示詞：\n${positive}\n\n負向提示詞：\n${negative}` };
 }
 
@@ -97,9 +120,7 @@ function renderOutputs() {
   document.querySelector("#fullOutput").value = prompt.full;
 }
 
-function renderCardTypes() {
-  cardType.innerHTML = Object.entries(typeLabels).map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
-}
+function renderCardTypes() { cardType.innerHTML = Object.entries(typeLabels).map(([value, label]) => `<option value="${value}">${label}</option>`).join(""); }
 
 function renderCardLists() {
   cardLists.innerHTML = Object.entries(typeLabels).map(([type, label]) => {
@@ -119,10 +140,7 @@ function renderCardLists() {
 function renderAll() {
   document.querySelector(`[name="mode"][value="${state.mode}"]`).checked = true;
   document.querySelector("#platformSelect").value = state.platform;
-  renderSelectors();
-  renderOutputs();
-  renderCardTypes();
-  renderCardLists();
+  renderSelectors(); renderOutputs(); renderCardTypes(); renderCardLists();
 }
 
 function resetForm() {
@@ -131,23 +149,19 @@ function resetForm() {
   document.querySelector("#cardType").disabled = false;
 }
 
-function escapeHtml(value) {
-  return String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
-}
+function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char])); }
 
 selectors.addEventListener("change", (event) => {
   const type = event.target.dataset.selector;
   if (!type) return;
   state.selections[type] = event.target.value;
-  persist();
-  renderOutputs();
+  persist(); renderOutputs();
 });
 
 document.querySelector("#builderForm").addEventListener("change", (event) => {
   if (event.target.name === "mode") state.mode = event.target.value;
   if (event.target.name === "platform") state.platform = event.target.value;
-  persist();
-  renderOutputs();
+  persist(); renderOutputs();
 });
 
 document.querySelectorAll(".copy-button").forEach((button) => button.addEventListener("click", async () => {
@@ -158,17 +172,13 @@ document.querySelectorAll(".copy-button").forEach((button) => button.addEventLis
 }));
 
 document.querySelector("#clearSelectionButton").addEventListener("click", () => {
-  state.selections = {};
-  persist("已清空目前選擇");
-  renderAll();
+  state.selections = {}; persist("已清空目前選擇"); renderAll();
 });
 
 document.querySelector("#resetDataButton").addEventListener("click", () => {
   if (!confirm("確定要重設為預設資料？這會覆蓋目前卡片。")) return;
   state = { cards: defaultCards, selections: {}, mode: "image", platform: "ChatGPT" };
-  persist("已重設預設資料");
-  resetForm();
-  renderAll();
+  persist("已重設為沐沐官方預設資料"); resetForm(); renderAll();
 });
 
 document.querySelector("#cardForm").addEventListener("submit", (event) => {
@@ -183,9 +193,7 @@ document.querySelector("#cardForm").addEventListener("submit", (event) => {
   };
   const index = state.cards.findIndex((item) => item.id === id);
   if (index >= 0) state.cards[index] = card; else state.cards.push(card);
-  persist("卡片已保存");
-  resetForm();
-  renderAll();
+  persist("卡片已保存"); resetForm(); renderAll();
 });
 
 document.querySelector("#cancelEditButton").addEventListener("click", resetForm);
@@ -206,10 +214,9 @@ cardLists.addEventListener("click", (event) => {
   if (deleteId && confirm("確定要刪除此卡片？")) {
     state.cards = state.cards.filter((item) => item.id !== deleteId);
     Object.keys(state.selections).forEach((type) => { if (state.selections[type] === deleteId) state.selections[type] = ""; });
-    persist("卡片已刪除");
-    renderAll();
+    persist("卡片已刪除"); renderAll();
   }
 });
 
 renderAll();
-persist("資料已就緒");
+persist("沐沐官方資料已就緒");
