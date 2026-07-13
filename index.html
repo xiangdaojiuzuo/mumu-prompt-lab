@@ -9,7 +9,7 @@
 <body>
 <main class="app-shell">
   <header class="hero">
-    <div><p class="eyebrow">Mumu Prompt Lab</p><h1>沐沐提示詞管理器</h1><p class="hero-copy">選擇模式、平台與卡片後，即時組合完整提示詞並一鍵複製。提示詞保存在此瀏覽器，母卡圖片同步至雲端圖片庫。</p></div>
+    <div><p class="eyebrow">Mumu Prompt Lab</p><h1>沐沐提示詞管理器</h1><p class="hero-copy">選擇模式、平台與卡片後，即時組合完整提示詞並一鍵複製。提示詞與母卡圖片同步至雲端。</p></div>
     <div class="hero-actions"><button id="resetDataButton" class="ghost-button" type="button">重設預設資料</button><button id="clearSelectionButton" class="ghost-button" type="button">清空選擇</button></div>
   </header>
   <section class="status-bar" aria-live="polite"><span id="saveStatus">資料已就緒</span><span id="copyStatus"></span></section>
@@ -35,8 +35,8 @@
     <div id="cardLists" class="card-lists"></div>
   </section>
 </main>
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 <script src="image-library.js?v=4"></script>
-<script src="image-rename.js?v=4"></script>
+<script src="image-library-controller.js?v=1"></script>
 </body>
 </html>
