@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>沐沐提示詞管理器</title>
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 </head>
 <body>
 <main class="app-shell">
@@ -19,16 +19,28 @@
     <div id="imageGrid" class="image-grid"></div>
   </section>
   <section class="workspace" aria-label="提示詞組合工作區">
-    <form class="control-panel" id="builderForm">
-      <section class="panel-card">
-        <h2>基本設定</h2>
-        <div class="segmented" role="group" aria-label="模式切換"><label><input type="radio" name="mode" value="image" checked /><span>生圖</span></label><label><input type="radio" name="mode" value="video" /><span>生影片</span></label></div>
-        <label class="field-label" for="platformSelect">平台</label><select id="platformSelect" name="platform"><option>ChatGPT</option><option>Grok</option><option>Flow</option><option>Veo</option></select>
-        <p class="field-label" style="margin:18px 0 8px">身份模式</p>
-        <div class="segmented" role="group" aria-label="身份模式切換"><label><input type="radio" name="identityMode" value="attached" checked /><span>已附母卡</span></label><label><input type="radio" name="identityMode" value="unattached" /><span>未附母卡</span></label></div>
-        <p id="identityModeStatus" class="hero-copy" style="margin:0">🟢 已附母卡（推薦）</p>
-      </section>
-      <section class="panel-card"><h2>卡片選擇</h2><div id="selectors" class="selector-grid"></div></section>
+    <form class="control-panel prompt-studio" id="builderForm">
+      <div class="studio-heading">
+        <p class="eyebrow">Prompt Studio</p>
+        <h2>提示詞積木</h2>
+      </div>
+      <details class="studio-block studio-block-settings" data-studio-block="settings" open>
+        <summary><span class="studio-block-title"><span aria-hidden="true">🎯</span> 生圖設定</span><span class="studio-chevron" aria-hidden="true"></span></summary>
+        <div class="studio-block-content">
+          <div class="segmented" role="group" aria-label="模式切換"><label><input type="radio" name="mode" value="image" checked /><span>生圖</span></label><label><input type="radio" name="mode" value="video" /><span>生影片</span></label></div>
+          <label class="field-label" for="platformSelect">平台</label><select id="platformSelect" name="platform"><option>ChatGPT</option><option>Grok</option><option>Flow</option><option>Veo</option></select>
+          <p class="field-label identity-mode-label">身份模式</p>
+          <div class="segmented" role="group" aria-label="身份模式切換"><label><input type="radio" name="identityMode" value="attached" checked /><span>已附母卡</span></label><label><input type="radio" name="identityMode" value="unattached" /><span>未附母卡</span></label></div>
+          <p id="identityModeStatus" class="hero-copy identity-mode-status">🟢 已附母卡（推薦）</p>
+        </div>
+      </details>
+      <div id="selectors" class="studio-block-stack"></div>
+      <details class="studio-block studio-block-quality" data-studio-block="quality">
+        <summary><span class="studio-block-title"><span aria-hidden="true">✨</span> 品質</span><span class="studio-chevron" aria-hidden="true"></span></summary>
+        <div class="studio-block-content">
+          <p class="studio-fixed-note">依照生圖或生影片模式，自動套用目前既有的品質、穩定與負向提示詞規則。</p>
+        </div>
+      </details>
     </form>
     <section class="output-panel" aria-label="提示詞輸出">
       <article class="prompt-card"><div class="prompt-heading"><h2>正向提示詞</h2><button class="copy-button" data-copy="positive" type="button">複製</button></div><textarea id="positiveOutput" readonly></textarea></article>
@@ -42,7 +54,7 @@
     <div id="cardLists" class="card-lists"></div>
   </section>
 </main>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 <script src="image-library.js?v=6"></script>
 <script src="share-launcher.js?v=1"></script>
 <script src="one-click-generation.js?v=2"></script>

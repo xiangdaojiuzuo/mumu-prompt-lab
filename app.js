@@ -143,10 +143,28 @@ function buildPrompt() {
 }
 
 function renderSelectors() {
-  selectors.innerHTML = Object.entries(typeLabels).map(([type, label]) => {
+  const selectorField = (type) => {
     const options = byType(type).map((card) => `<option value="${card.id}" ${String(state.selections[type] || "") === card.id ? "selected" : ""}>${escapeHtml(card.name)}</option>`).join("");
-    return `<label>${label}<select data-selector="${type}"><option value="">不選擇</option>${options}</select></label>`;
-  }).join("");
+    return `<label>${typeLabels[type]}<select data-selector="${type}"><option value="">不選擇</option>${options}</select></label>`;
+  };
+  const blocks = [
+    { key: "character", icon: "👤", title: "人物", types: ["character", "angle"] },
+    { key: "expression", icon: "😊", title: "表情", types: ["expression"] },
+    { key: "outfit", icon: "👗", title: "服裝", types: ["outfit"] },
+    { key: "scene", icon: "🌸", title: "場景", types: ["scene"] },
+  ];
+  const openByDefault = !window.matchMedia("(max-width: 560px)").matches;
+  selectors.innerHTML = blocks.map((block) => `
+    <details class="studio-block studio-block-${block.key}" data-studio-block="${block.key}" ${openByDefault ? "open" : ""}>
+      <summary><span class="studio-block-title"><span aria-hidden="true">${block.icon}</span> ${block.title}</span><span class="studio-chevron" aria-hidden="true"></span></summary>
+      <div class="studio-block-content studio-selector-content">${block.types.map(selectorField).join("")}</div>
+    </details>`).join("");
+}
+
+function applyAccordionDefaults() {
+  const mobile = window.matchMedia("(max-width: 560px)").matches;
+  const blocks = [...document.querySelectorAll("#builderForm .studio-block")];
+  blocks.forEach((block, index) => { block.open = mobile ? index === 0 : true; });
 }
 
 function renderOutputs() {
@@ -193,6 +211,16 @@ selectors.addEventListener("change", (event) => {
   state.selections[type] = event.target.value;
   persistLocal(); renderOutputs();
 });
+
+document.querySelector("#builderForm").addEventListener("toggle", (event) => {
+  const openedBlock = event.target;
+  if (!openedBlock.matches?.(".studio-block") || !openedBlock.open || !window.matchMedia("(max-width: 560px)").matches) return;
+  document.querySelectorAll("#builderForm .studio-block").forEach((block) => {
+    if (block !== openedBlock) block.open = false;
+  });
+}, true);
+
+window.matchMedia("(max-width: 560px)").addEventListener("change", applyAccordionDefaults);
 
 document.querySelector("#builderForm").addEventListener("change", (event) => {
   if (event.target.name === "mode") state.mode = event.target.value;
@@ -290,10 +318,12 @@ async function initialize() {
   try {
     await loadCloudCards();
     renderAll();
+    applyAccordionDefaults();
   } catch (error) {
     console.error(error);
     state.cards = defaultCards;
     renderAll();
+    applyAccordionDefaults();
     saveStatus.textContent = `雲端卡片讀取失敗：${error.message}`;
   }
 }
