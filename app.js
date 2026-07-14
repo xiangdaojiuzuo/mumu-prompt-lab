@@ -63,6 +63,8 @@ const modeHints = {
   },
 };
 
+const MUMU_V3_DUAL_REFERENCE = "【沐沐官方母卡 V3｜雙母卡身份參考規則】請同時使用母卡圖片庫中的沐沐官方母卡 V3 半身照與全身照，兩張皆為同一位沐沐的身份參考。半身母卡優先鎖定臉部身份、臉部幾何、臉型比例、眼型、眼距、五官與空氣瀏海；全身母卡優先鎖定深棕長髮、身形比例、整體曲線、腿身比例與角色整體辨識度。不得將兩張參考圖理解為兩位不同人物，不得混合生成新人物，不得擅自換臉或改變沐沐身份。";
+
 let state = loadLocalState();
 const selectors = document.querySelector("#selectors");
 const cardLists = document.querySelector("#cardLists");
@@ -120,14 +122,17 @@ async function loadCloudCards() {
 
 function byType(type) { return state.cards.filter((card) => card.type === type); }
 function selectedCards() { return Object.keys(typeLabels).map((type) => state.cards.find((card) => card.id === String(state.selections[type]))).filter(Boolean); }
+function isOfficialMumuV3(card) { return card?.type === "character" && /沐沐官方母卡\s*v?3(?:\.0)?/i.test(card.name || ""); }
 
 function buildPrompt() {
   const cards = selectedCards();
   const mode = modeHints[state.mode];
   const platform = state.platform;
+  const characterCard = cards.find((card) => card.type === "character");
   const positiveParts = [
     `【用途】${mode.label}｜${platform}`,
     `【平台規則】${platformHints[platform]}`,
+    isOfficialMumuV3(characterCard) ? MUMU_V3_DUAL_REFERENCE : "",
     ...cards.map((card) => `【${typeLabels[card.type]}｜${card.name}】${card.positive}`),
     `【${mode.label}品質與穩定規則】${mode.positive}`,
   ].filter(Boolean);
