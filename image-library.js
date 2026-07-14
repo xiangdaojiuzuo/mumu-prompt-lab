@@ -93,6 +93,30 @@ async function getImages() {
   }));
 }
 
+function uploadImageFile(file, path) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const url = `${SUPABASE_URL}/storage/v1/object/${IMAGE_BUCKET}/${encodeURIComponent(path)}`;
+    xhr.open("POST", url, true);
+    xhr.setRequestHeader("apikey", SUPABASE_PUBLISHABLE_KEY);
+    xhr.setRequestHeader("Authorization", `Bearer ${SUPABASE_PUBLISHABLE_KEY}`);
+    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    xhr.setRequestHeader("x-upsert", "false");
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+        return;
+      }
+      reject(new Error(`Storage upload 失敗 (${xhr.status})：${xhr.responseText || "Supabase 未回傳錯誤內容"}`));
+    };
+    xhr.onerror = () => reject(new Error("Storage upload 網路連線失敗；請確認 Supabase 連線後再試"));
+    xhr.onabort = () => reject(new Error("Storage upload 已取消"));
+    xhr.ontimeout = () => reject(new Error("Storage upload 逾時"));
+    xhr.timeout = 120000;
+    xhr.send(file);
+  });
+}
+
 async function addImages(files) {
   const valid = [...files].filter((file) => file.type.startsWith("image/"));
   if (!valid.length) return;
@@ -100,12 +124,8 @@ async function addImages(files) {
   let uploaded = 0;
   for (const file of valid) {
     const path = safeFileName(file);
-    const response = await fetch(`${SUPABASE_URL}/storage/v1/object/${IMAGE_BUCKET}/${encodeURIComponent(path)}`, {
-      method: "POST",
-      headers: { ...storageHeaders, "Content-Type": file.type, "x-upsert": "false" },
-      body: file
-    });
-    if (!response.ok) throw new Error(`上傳失敗：${await response.text()}`);
+    imageSaveStatus.textContent = `正在上傳圖片 ${uploaded + 1}/${valid.length} 到 Storage…`;
+    await uploadImageFile(file, path);
     uploaded += 1;
   }
   imageSaveStatus.textContent = `已上傳 ${uploaded} 張圖片到沐沐雲端圖片庫`;
@@ -221,8 +241,8 @@ async function handleFiles(files) {
   try {
     await addImages(files);
   } catch (error) {
-    console.error(error);
-    imageSaveStatus.textContent = `圖片處理失敗：${error.message}`;
+    console.error("母卡圖片上傳流程失敗", error);
+    imageSaveStatus.textContent = `圖片上傳失敗：${error.message}`;
   }
 }
 
