@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>沐沐提示詞管理器</title>
-  <link rel="stylesheet" href="styles.css?v=6" />
+  <link rel="stylesheet" href="styles.css?v=7" />
 </head>
 <body>
 <main class="app-shell">
@@ -29,11 +29,12 @@
   <section class="workspace" aria-label="提示詞組合工作區">
     <form class="control-panel prompt-studio" id="builderForm">
       <div class="studio-heading">
-        <p class="eyebrow">Prompt Studio</p>
-        <h2>提示詞積木</h2>
+        <div class="studio-heading-row"><div><p class="eyebrow">Prompt Studio</p><h2>提示詞積木</h2></div><span class="studio-version">V4 工作流</span></div>
+        <p class="studio-guide">依序組裝人物、表情、服裝與場景，右側會同步產生完整提示詞。</p>
       </div>
+      <div class="studio-flow">
       <details class="studio-block studio-block-settings" data-studio-block="settings" open>
-        <summary><span class="studio-summary-copy"><span class="studio-block-title"><span aria-hidden="true">🎯</span> 生圖設定</span><small id="studioSummary-settings" class="studio-summary">生圖｜ChatGPT｜已附母卡</small></span><span class="studio-chevron" aria-hidden="true"></span></summary>
+        <summary><span class="studio-summary-copy"><span class="studio-block-title"><span class="studio-step" aria-hidden="true">1</span><span><span aria-hidden="true">🎯</span> 生圖設定</span></span><small id="studioSummary-settings" class="studio-summary">生圖｜ChatGPT｜已附母卡</small></span><span class="studio-chevron" aria-hidden="true"></span></summary>
         <div class="studio-block-content">
           <div class="segmented" role="group" aria-label="模式切換"><label><input type="radio" name="mode" value="image" checked /><span>生圖</span></label><label><input type="radio" name="mode" value="video" /><span>生影片</span></label></div>
           <label class="field-label" for="platformSelect">平台</label><select id="platformSelect" name="platform"><option>ChatGPT</option><option>Grok</option><option>Flow</option><option>Veo</option></select>
@@ -44,11 +45,12 @@
       </details>
       <div id="selectors" class="studio-block-stack"></div>
       <details class="studio-block studio-block-quality" data-studio-block="quality">
-        <summary><span class="studio-summary-copy"><span class="studio-block-title"><span aria-hidden="true">✨</span> 品質</span><small id="studioSummary-quality" class="studio-summary">生圖品質｜自動套用</small></span><span class="studio-chevron" aria-hidden="true"></span></summary>
+        <summary><span class="studio-summary-copy"><span class="studio-block-title"><span class="studio-step" aria-hidden="true">6</span><span><span aria-hidden="true">✨</span> 品質</span></span><small id="studioSummary-quality" class="studio-summary">生圖品質｜自動套用</small></span><span class="studio-chevron" aria-hidden="true"></span></summary>
         <div class="studio-block-content">
           <p class="studio-fixed-note">依照生圖或生影片模式，自動套用目前既有的品質、穩定與負向提示詞規則。</p>
         </div>
       </details>
+      </div>
     </form>
     <section class="output-panel" aria-label="提示詞輸出">
       <article class="prompt-card"><div class="prompt-heading"><h2>正向提示詞</h2><button class="copy-button" data-copy="positive" type="button">複製</button></div><textarea id="positiveOutput" readonly></textarea></article>
@@ -63,7 +65,7 @@
   </section>
 </main>
 <script src="peer-reference.js?v=1"></script>
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 <script src="image-library.js?v=6"></script>
 <script src="share-launcher.js?v=1"></script>
 <script src="one-click-generation.js?v=3"></script>

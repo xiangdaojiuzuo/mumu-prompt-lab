@@ -150,15 +150,15 @@ function renderSelectors() {
     return `<label>${typeLabels[type]}<select data-selector="${type}"><option value="">不選擇</option>${options}</select></label>`;
   };
   const blocks = [
-    { key: "character", icon: "👤", title: "人物", types: ["character", "angle"] },
-    { key: "expression", icon: "😊", title: "表情", types: ["expression"] },
-    { key: "outfit", icon: "👗", title: "服裝", types: ["outfit"] },
-    { key: "scene", icon: "🌸", title: "場景", types: ["scene"] },
+    { key: "character", step: 2, icon: "👤", title: "人物", types: ["character", "angle"] },
+    { key: "expression", step: 3, icon: "😊", title: "表情", types: ["expression"] },
+    { key: "outfit", step: 4, icon: "👗", title: "服裝", types: ["outfit"] },
+    { key: "scene", step: 5, icon: "🌸", title: "場景", types: ["scene"] },
   ];
   const openByDefault = !window.matchMedia("(max-width: 560px)").matches;
   selectors.innerHTML = blocks.map((block) => `
     <details class="studio-block studio-block-${block.key}" data-studio-block="${block.key}" ${openByDefault ? "open" : ""}>
-      <summary><span class="studio-summary-copy"><span class="studio-block-title"><span aria-hidden="true">${block.icon}</span> ${block.title}</span><small id="studioSummary-${block.key}" class="studio-summary">尚未選擇</small></span><span class="studio-chevron" aria-hidden="true"></span></summary>
+      <summary><span class="studio-summary-copy"><span class="studio-block-title"><span class="studio-step" aria-hidden="true">${block.step}</span><span><span aria-hidden="true">${block.icon}</span> ${block.title}</span></span><small id="studioSummary-${block.key}" class="studio-summary">尚未選擇</small></span><span class="studio-chevron" aria-hidden="true"></span></summary>
       <div class="studio-block-content studio-selector-content">${block.types.map(selectorField).join("")}</div>
     </details>`).join("");
 }
