@@ -95,8 +95,10 @@ oneClickGenerationButton?.addEventListener("click", async () => {
   }
 
   const peerReferenceFile = window.mumuPeerReference?.getFile?.() || null;
+  const homeReferenceCount = window.mumuHomeReference?.getActiveReferences?.().length || 0;
+  const referenceCount = 2 + homeReferenceCount + (peerReferenceFile ? 1 : 0);
   oneClickGenerationButton.disabled = true;
-  oneClickStatus.textContent = peerReferenceFile ? "正在準備兩張沐沐母卡＋網友參考圖…" : "正在準備半身＋全身母卡…";
+  oneClickStatus.textContent = `正在準備 ${referenceCount} 張參考圖…`;
 
   try {
     const [items, names] = await Promise.all([shareListImages(), shareLoadNameMap()]);
@@ -105,9 +107,11 @@ oneClickGenerationButton?.addEventListener("click", async () => {
     if (missing.length) throw new Error(`找不到${missing.join("、")}；請確認圖片名稱包含「半身」或「全身」`);
 
     const files = await Promise.all([
-      referenceToFile(half, "沐沐官方母卡V3-半身"),
-      referenceToFile(full, "沐沐官方母卡V3-全身")
+      referenceToFile(full, "沐沐官方母卡V3-全身"),
+      referenceToFile(half, "沐沐官方母卡V3-半身")
     ]);
+    const homeReferenceFiles = await window.mumuHomeReference?.getActiveFiles?.() || [];
+    files.push(...homeReferenceFiles);
     if (peerReferenceFile) {
       const extension = peerReferenceFile.name.includes(".") ? peerReferenceFile.name.split(".").pop() : "jpg";
       files.push(new File([peerReferenceFile], `網友參考圖.${extension}`, { type: peerReferenceFile.type, lastModified: peerReferenceFile.lastModified }));
@@ -116,16 +120,16 @@ oneClickGenerationButton?.addEventListener("click", async () => {
     await navigator.clipboard.writeText(prompt);
 
     if (!navigator.share || !navigator.canShare?.({ files })) {
-      throw new Error(`這個瀏覽器不支援直接分享${peerReferenceFile ? "三張參考圖" : "兩張母卡"}；精簡提示詞已先複製`);
+      throw new Error(`這個瀏覽器不支援直接分享 ${files.length} 張參考圖；精簡提示詞已先複製`);
     }
 
     oneClickStatus.textContent = "精簡提示詞已複製；請在分享面板選 ChatGPT";
     await navigator.share({
       files,
       text: prompt,
-      title: peerReferenceFile ? "沐沐生圖｜雙母卡＋網友參考圖" : "沐沐生圖｜半身＋全身母卡"
+      title: `沐沐生圖｜${files.length} 張參考圖`
     });
-    oneClickStatus.textContent = peerReferenceFile ? "✅ 雙母卡＋網友圖已送出　📋 提示詞已複製　👉 到 ChatGPT 貼上即可" : "✅ 母卡已送出　📋 提示詞已複製　👉 到 ChatGPT 貼上即可";
+    oneClickStatus.textContent = `✅ ${files.length} 張參考圖已送出　📋 提示詞已複製　👉 到 ChatGPT 貼上即可`;
   } catch (error) {
     if (error?.name === "AbortError") {
       oneClickStatus.textContent = "已取消分享；精簡提示詞仍在剪貼簿";

@@ -64,7 +64,8 @@ const modeHints = {
 };
 
 const MUMU_V3_DUAL_REFERENCE = "【沐沐官方母卡 V3｜雙母卡身份參考規則】請同時使用母卡圖片庫中的沐沐官方母卡 V3 半身照與全身照，兩張皆為同一位沐沐的身份參考。半身母卡優先鎖定臉部身份、臉部幾何、臉型比例、眼型、眼距、五官與空氣瀏海；全身母卡優先鎖定深棕長髮、身形比例、整體曲線、腿身比例與角色整體辨識度。不得將兩張參考圖理解為兩位不同人物，不得混合生成新人物，不得擅自換臉或改變沐沐身份。";
-const PEER_REFERENCE_RULES = "【網友參考圖｜模仿規則】第三張圖片是網友參考圖，只用來參考並重現其服裝款式與配色、姿勢與動作、鏡頭角度、取景構圖、場景配置及整體氛圍。最終人物必須完整替換為沐沐，以沐沐半身母卡鎖定臉部身份、全身母卡鎖定髮型與身形比例；不得保留、混合或套用網友圖人物的臉部、五官、身份與身形。";
+const HOME_REFERENCE_RULES = "【沐沐家官方設定圖｜場景一致性規則】檔名以「沐沐居家」開頭的圖片皆為沐沐家既有官方設定，不是一般靈感圖。全屋大局觀圖負責鎖定格局、空間關係與生活動線；區域 P 圖負責鎖定本次場景的家具、配色、燈光、視角與細節。必須維持奶油白、木質、粉色點綴、溫暖柔和且有生活感的同一個沐沐家，不得重新設計成另一間住宅。";
+const PEER_REFERENCE_RULES = "【網友參考圖｜模仿規則】檔名為「網友參考圖」的圖片只用來參考並重現其服裝款式與配色、姿勢與動作、鏡頭角度、取景構圖、場景配置及整體氛圍。最終人物必須完整替換為沐沐，以沐沐半身母卡鎖定臉部身份、全身母卡鎖定髮型與身形比例；不得保留、混合或套用網友圖人物的臉部、五官、身份與身形。若同時附有沐沐家官方設定圖，場景以沐沐家設定為準，網友圖只參考人物相關的服裝、姿勢、動作與鏡頭構圖。";
 
 let state = loadLocalState();
 const selectors = document.querySelector("#selectors");
@@ -134,6 +135,7 @@ function buildPrompt() {
     `【用途】${mode.label}｜${platform}`,
     `【平台規則】${platformHints[platform]}`,
     isOfficialMumuV3(characterCard) ? MUMU_V3_DUAL_REFERENCE : "",
+    window.mumuHomeReference?.hasActiveReference?.() ? HOME_REFERENCE_RULES : "",
     window.mumuPeerReference?.hasFile?.() ? PEER_REFERENCE_RULES : "",
     ...cards.map((card) => `【${typeLabels[card.type]}｜${card.name}】${card.positive}`),
     `【${mode.label}品質與穩定規則】${mode.positive}`,
@@ -215,7 +217,7 @@ function renderCardLists() {
 function renderAll() {
   document.querySelector(`[name="mode"][value="${state.mode}"]`).checked = true;
   document.querySelector("#platformSelect").value = state.platform;
-  renderSelectors(); renderOutputs(); renderCardTypes(); renderCardLists(); updateStudioSummaries();
+  renderSelectors(); renderOutputs(); renderCardTypes(); renderCardLists(); updateStudioSummaries(); window.mumuHomeReference?.sync?.();
 }
 
 function resetForm() {

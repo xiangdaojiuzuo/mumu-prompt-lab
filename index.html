@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>沐沐提示詞管理器</title>
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body>
 <main class="app-shell">
@@ -18,6 +18,21 @@
     <label class="image-drop" id="imageDrop" for="imageInput"><strong>點這裡選圖片，或把圖片拖進來</strong><span>支援 JPG、PNG、WEBP；圖片會上傳到 Supabase 雲端圖片庫。</span><input id="imageInput" type="file" accept="image/*" multiple /></label>
     <div id="imageGrid" class="image-grid"></div>
   </section>
+  <details class="home-reference-library panel-card" id="homeReferenceLibrary">
+    <summary class="home-reference-heading"><div><p class="eyebrow">Official Home References</p><h2>🏠 沐沐家官方設定圖</h2><p>已內建沐沐居家 P2～P7 與全屋動線設定；選擇居家場景後會自動帶入對應參考圖。</p></div><span class="home-reference-count">7 張已歸類</span></summary>
+    <div class="home-reference-body">
+      <p id="homeReferenceStatus" class="home-reference-status">選擇沐沐家場景後，網站會自動套用全屋大局觀與對應區域 P 圖。</p>
+      <div class="home-reference-grid">
+        <article><img src="assets/mumu-home/p2-public-a.jpg" alt="沐沐居家 P2 公共區域 A" loading="lazy" /><div><strong>P2｜公共區域 A</strong><span>玄關、客廳、餐桌區、陽台日景</span></div></article>
+        <article><img src="assets/mumu-home/p3-public-b.jpg" alt="沐沐居家 P3 公共區域 B" loading="lazy" /><div><strong>P3｜公共區域 B</strong><span>客廳電視牆、閱讀角、收納區、陽台夜景</span></div></article>
+        <article><img src="assets/mumu-home/p4-private-a.jpg" alt="沐沐居家 P4 私人區域 A" loading="lazy" /><div><strong>P4｜房間全景 A</strong><span>房間全景、床區、書桌區、收藏區</span></div></article>
+        <article><img src="assets/mumu-home/p5-private-b.jpg" alt="沐沐居家 P5 私人區域 B" loading="lazy" /><div><strong>P5｜房間細節 B</strong><span>窗邊、衣架、梳妝區、床上與房門視角</span></div></article>
+        <article><img src="assets/mumu-home/p5-whole-home.jpg" alt="沐沐居家全屋環景與動線整合" loading="lazy" /><div><strong>全屋大局觀｜環景與動線</strong><span>全屋鳥瞰、空間關係、生活動線與整體氛圍</span></div></article>
+        <article><img src="assets/mumu-home/p6-private-details.jpg" alt="沐沐居家 P6 房間細節與衛浴" loading="lazy" /><div><strong>P6｜房間細節與衛浴</strong><span>睡眠區、更衣區、梳妝台、書桌、衛浴區</span></div></article>
+        <article><img src="assets/mumu-home/p7-private-c.jpg" alt="沐沐居家 P7 私人區域 C" loading="lazy" /><div><strong>P7｜房間另一側</strong><span>床頭、電視牆、閱讀角、梳妝台、更衣區、房門</span></div></article>
+      </div>
+    </div>
+  </details>
   <section class="peer-reference panel-card" aria-label="網友參考圖">
     <div class="section-title"><div><p class="eyebrow">Inspiration Reference</p><h2>🖼️ 網友參考圖</h2></div><p>放入一張想讓沐沐參考的圖片。它只負責服裝、姿勢、鏡頭、構圖與場景；人物身份仍由沐沐半身＋全身母卡鎖定。</p></div>
     <label class="peer-reference-drop" id="peerReferenceDrop" for="peerReferenceInput"><strong>點這裡選擇網友圖</strong><span>一次使用一張，只暫存在目前頁面，不會上傳雲端。</span><input id="peerReferenceInput" type="file" accept="image/*" /></label>
@@ -64,10 +79,11 @@
     <div id="cardLists" class="card-lists"></div>
   </section>
 </main>
+<script src="home-reference.js?v=1"></script>
 <script src="peer-reference.js?v=1"></script>
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 <script src="image-library.js?v=6"></script>
 <script src="share-launcher.js?v=1"></script>
-<script src="one-click-generation.js?v=3"></script>
+<script src="one-click-generation.js?v=4"></script>
 </body>
 </html>
