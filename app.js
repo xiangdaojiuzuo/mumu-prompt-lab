@@ -99,17 +99,17 @@ const cardHeaders = {
 };
 
 function loadLocalState() {
-  const fallback = { cards: [], selections: {}, mode: "image", platform: "ChatGPT", outfitCategory: "", catalogOutfit: "", customOutfit: {}, customScene: {} };
+  const fallback = { cards: [], selections: {}, mode: "image", platform: "ChatGPT", outfitCategory: "", catalogOutfit: "", customOutfit: {}, customScene: {}, customAction: {} };
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return { ...fallback, ...stored, cards: [], selections: stored?.selections || {}, customOutfit: stored?.customOutfit || {}, customScene: stored?.customScene || {} };
+    return { ...fallback, ...stored, cards: [], selections: stored?.selections || {}, customOutfit: stored?.customOutfit || {}, customScene: stored?.customScene || {}, customAction: stored?.customAction || {} };
   } catch {
     return fallback;
   }
 }
 
 function persistLocal(message = "選擇已保存") {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ selections: state.selections, mode: state.mode, platform: state.platform, outfitCategory: state.outfitCategory, catalogOutfit: state.catalogOutfit, customOutfit: state.customOutfit, customScene: state.customScene }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ selections: state.selections, mode: state.mode, platform: state.platform, outfitCategory: state.outfitCategory, catalogOutfit: state.catalogOutfit, customOutfit: state.customOutfit, customScene: state.customScene, customAction: state.customAction }));
   saveStatus.textContent = message;
 }
 
@@ -148,10 +148,15 @@ function customOutfitText() {
   return Object.entries(labels).map(([key, label]) => state.customOutfit?.[key]?.trim() ? `${label}：${state.customOutfit[key].trim()}` : "").filter(Boolean).join("；");
 }
 function customSceneText() { return Object.values(state.customScene || {}).map((value) => String(value || "").trim()).filter(Boolean).join("；"); }
+function customActionText() {
+  const labels = { main: "主要動作", detail: "動作細節" };
+  return Object.entries(labels).map(([key, label]) => state.customAction?.[key]?.trim() ? `${label}：${state.customAction[key].trim()}` : "").filter(Boolean).join("；");
+}
 
 function buildPrompt() {
   const customOutfit = customOutfitText();
   const customScene = customSceneText();
+  const customAction = customActionText();
   const cards = selectedCards().filter((card) => !(card.type === "outfit" && (customOutfit || state.catalogOutfit)) && !(card.type === "scene" && customScene));
   const mode = modeHints[state.mode];
   const platform = state.platform;
@@ -165,6 +170,7 @@ function buildPrompt() {
     ...cards.map((card) => `【${typeLabels[card.type]}｜${card.name}】${card.positive}`),
     customOutfit ? `【自訂服裝】${customOutfit}；維持真實衣料紋理、自然皺褶、張力與符合重力的垂墜` : (state.catalogOutfit ? `【沐沐服裝資料庫｜${state.catalogOutfit}】沐沐穿著${state.catalogOutfit}風格的完整穿搭，款式特徵清楚，衣料物理自然真實` : ""),
     customScene ? `【自訂場景】${customScene}；以此場景為唯一背景設定，不套用沐沐家室內格局` : "",
+    customAction ? `【動作｜要讓沐沐做什麼】${customAction}；動作自然連續，姿勢符合真實人體結構，並遵守場景中的真實物理` : "",
     `【${mode.label}品質與穩定規則】${mode.positive}`,
   ].filter(Boolean);
   const negativeParts = [...cards.map((card) => card.negative), mode.negative].filter(Boolean);
@@ -183,6 +189,7 @@ function renderSelectors() {
     { key: "expression", step: 3, icon: "😊", title: "表情", types: ["expression"] },
     { key: "outfit", step: 4, icon: "👗", title: "服裝", types: ["outfit"] },
     { key: "scene", step: 5, icon: "🌸", title: "場景", types: ["scene"] },
+    { key: "action", step: 6, icon: "🎬", title: "動作", types: [] },
   ];
   const openByDefault = !window.matchMedia("(max-width: 560px)").matches;
   const catalogCategoryOptions = OUTFIT_CATALOG.map((category) => `<option value="${escapeHtml(category.name)}" ${state.outfitCategory === category.name ? "selected" : ""}>${escapeHtml(category.name)}</option>`).join("");
@@ -190,7 +197,8 @@ function renderSelectors() {
   const catalogOutfitOptions = (activeCategory?.items || []).map((name) => `<option value="${escapeHtml(name)}" ${state.catalogOutfit === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("");
   const customControls = {
     outfit: `<div class="custom-builder"><p class="custom-builder-title">沐沐服裝資料庫 v1.1</p><label>服裝分類<select data-outfit-category><option value="">選擇分類</option>${catalogCategoryOptions}</select></label><label>服裝款式<select data-catalog-outfit ${activeCategory ? "" : "disabled"}><option value="">選擇服裝</option>${catalogOutfitOptions}</select></label><p class="custom-builder-divider">或自行搭配（填寫後優先套用）</p><div class="custom-field-grid"><label>上身<input data-custom-outfit="top" value="${escapeHtml(state.customOutfit.top || "")}" placeholder="例如：白色短袖上衣" /></label><label>下身<input data-custom-outfit="bottom" value="${escapeHtml(state.customOutfit.bottom || "")}" placeholder="例如：淺藍牛仔短褲" /></label><label>外搭<input data-custom-outfit="outer" value="${escapeHtml(state.customOutfit.outer || "")}" placeholder="例如：薄款防曬襯衫" /></label><label>鞋子／配件<input data-custom-outfit="accessory" value="${escapeHtml(state.customOutfit.accessory || "")}" placeholder="例如：涼鞋、草帽" /></label></div></div>`,
-    scene: `<div class="custom-builder"><p class="custom-builder-divider">或使用其他地點（填寫後優先套用）</p><label>自訂場景<input data-custom-scene="place" value="${escapeHtml(state.customScene.place || "")}" placeholder="例如：海邊、水上樂園、泳池" /></label><label>場景細節<textarea data-custom-scene="detail" placeholder="例如：夏日下午、度假村泳池、清澈水面">${escapeHtml(state.customScene.detail || "")}</textarea></label><p class="custom-builder-note">使用自訂場景時，不會附上沐沐家官方設定圖。</p></div>`
+    scene: `<div class="custom-builder"><p class="custom-builder-divider">或使用其他地點（填寫後優先套用）</p><label>自訂場景<input data-custom-scene="place" value="${escapeHtml(state.customScene.place || "")}" placeholder="例如：海邊、水上樂園、泳池" /></label><label>場景細節<textarea data-custom-scene="detail" placeholder="例如：夏日下午、度假村泳池、清澈水面">${escapeHtml(state.customScene.detail || "")}</textarea></label><p class="custom-builder-note">使用自訂場景時，不會附上沐沐家官方設定圖。</p></div>`,
+    action: `<div class="custom-builder action-builder"><label>要讓沐沐做什麼<textarea data-custom-action="main" placeholder="例如：在海邊淺水區開心玩水，雙手輕輕撥起水花">${escapeHtml(state.customAction.main || "")}</textarea></label><label>動作細節（選填）<textarea data-custom-action="detail" placeholder="例如：身體自然微微前傾，看向鏡頭，水花停在動作瞬間">${escapeHtml(state.customAction.detail || "")}</textarea></label></div>`
   };
   selectors.innerHTML = blocks.map((block) => `
     <details class="studio-block studio-block-${block.key}" data-studio-block="${block.key}" ${openByDefault ? "open" : ""}>
@@ -215,6 +223,7 @@ function updateStudioSummaries() {
   setStudioSummary("expression", selectedCardName("expression"));
   setStudioSummary("outfit", customOutfitText() ? `自訂｜${customOutfitText()}` : (state.catalogOutfit || selectedCardName("outfit")));
   setStudioSummary("scene", customSceneText() ? `自訂｜${customSceneText()}` : selectedCardName("scene"));
+  setStudioSummary("action", customActionText());
   setStudioSummary("quality", `${modeHints[state.mode].label}品質｜自動套用`);
 }
 
@@ -287,9 +296,11 @@ selectors.addEventListener("change", (event) => {
 selectors.addEventListener("input", (event) => {
   const outfitField = event.target.dataset.customOutfit;
   const sceneField = event.target.dataset.customScene;
-  if (!outfitField && !sceneField) return;
+  const actionField = event.target.dataset.customAction;
+  if (!outfitField && !sceneField && !actionField) return;
   if (outfitField) state.customOutfit[outfitField] = event.target.value;
   if (sceneField) state.customScene[sceneField] = event.target.value;
+  if (actionField) state.customAction[actionField] = event.target.value;
   persistLocal(); renderOutputs(); updateStudioSummaries(); window.mumuHomeReference?.sync?.();
   document.querySelector("#builderForm").dispatchEvent(new Event("change", { bubbles: true }));
 });
@@ -318,7 +329,7 @@ document.querySelectorAll(".copy-button").forEach((button) => button.addEventLis
 }));
 
 document.querySelector("#clearSelectionButton").addEventListener("click", () => {
-  state.selections = {}; state.outfitCategory = ""; state.catalogOutfit = ""; state.customOutfit = {}; state.customScene = {}; persistLocal("已清空目前選擇"); renderAll();
+  state.selections = {}; state.outfitCategory = ""; state.catalogOutfit = ""; state.customOutfit = {}; state.customScene = {}; state.customAction = {}; persistLocal("已清空目前選擇"); renderAll();
 });
 
 document.querySelector("#resetDataButton").addEventListener("click", async () => {
@@ -334,6 +345,7 @@ document.querySelector("#resetDataButton").addEventListener("click", async () =>
     state.catalogOutfit = "";
     state.customOutfit = {};
     state.customScene = {};
+    state.customAction = {};
     persistLocal("已重設為沐沐官方雲端資料"); resetForm(); renderAll();
   } catch (error) {
     console.error(error);
