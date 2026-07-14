@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>沐沐提示詞管理器</title>
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
 <main class="app-shell">
@@ -17,6 +17,14 @@
     <div class="section-title"><div><p class="eyebrow">Reference Images</p><h2>母卡圖片庫</h2></div><p>直接丟圖片進來，會儲存到沐沐雲端圖片庫。電腦與手機開啟同一網站即可看到同一批圖片。</p></div>
     <label class="image-drop" id="imageDrop" for="imageInput"><strong>點這裡選圖片，或把圖片拖進來</strong><span>支援 JPG、PNG、WEBP；圖片會上傳到 Supabase 雲端圖片庫。</span><input id="imageInput" type="file" accept="image/*" multiple /></label>
     <div id="imageGrid" class="image-grid"></div>
+  </section>
+  <section class="peer-reference panel-card" aria-label="網友參考圖">
+    <div class="section-title"><div><p class="eyebrow">Inspiration Reference</p><h2>🖼️ 網友參考圖</h2></div><p>放入一張想讓沐沐參考的圖片。它只負責服裝、姿勢、鏡頭、構圖與場景；人物身份仍由沐沐半身＋全身母卡鎖定。</p></div>
+    <label class="peer-reference-drop" id="peerReferenceDrop" for="peerReferenceInput"><strong>點這裡選擇網友圖</strong><span>一次使用一張，只暫存在目前頁面，不會上傳雲端。</span><input id="peerReferenceInput" type="file" accept="image/*" /></label>
+    <div id="peerReferencePreview" class="peer-reference-preview" hidden>
+      <img id="peerReferenceImage" alt="網友參考圖預覽" />
+      <div class="peer-reference-info"><strong id="peerReferenceName"></strong><span>一鍵生圖將分享：沐沐半身母卡＋全身母卡＋這張參考圖</span><div class="peer-reference-actions"><label class="ghost-button peer-reference-replace" for="peerReferenceInput">更換圖片</label><button id="peerReferenceRemove" class="danger-button" type="button">移除圖片</button></div></div>
+    </div>
   </section>
   <section class="workspace" aria-label="提示詞組合工作區">
     <form class="control-panel prompt-studio" id="builderForm">
@@ -54,9 +62,10 @@
     <div id="cardLists" class="card-lists"></div>
   </section>
 </main>
-<script src="app.js?v=7"></script>
+<script src="peer-reference.js?v=1"></script>
+<script src="app.js?v=8"></script>
 <script src="image-library.js?v=6"></script>
 <script src="share-launcher.js?v=1"></script>
-<script src="one-click-generation.js?v=2"></script>
+<script src="one-click-generation.js?v=3"></script>
 </body>
 </html>

@@ -64,6 +64,7 @@ const modeHints = {
 };
 
 const MUMU_V3_DUAL_REFERENCE = "【沐沐官方母卡 V3｜雙母卡身份參考規則】請同時使用母卡圖片庫中的沐沐官方母卡 V3 半身照與全身照，兩張皆為同一位沐沐的身份參考。半身母卡優先鎖定臉部身份、臉部幾何、臉型比例、眼型、眼距、五官與空氣瀏海；全身母卡優先鎖定深棕長髮、身形比例、整體曲線、腿身比例與角色整體辨識度。不得將兩張參考圖理解為兩位不同人物，不得混合生成新人物，不得擅自換臉或改變沐沐身份。";
+const PEER_REFERENCE_RULES = "【網友參考圖｜模仿規則】第三張圖片是網友參考圖，只用來參考並重現其服裝款式與配色、姿勢與動作、鏡頭角度、取景構圖、場景配置及整體氛圍。最終人物必須完整替換為沐沐，以沐沐半身母卡鎖定臉部身份、全身母卡鎖定髮型與身形比例；不得保留、混合或套用網友圖人物的臉部、五官、身份與身形。";
 
 let state = loadLocalState();
 const selectors = document.querySelector("#selectors");
@@ -133,6 +134,7 @@ function buildPrompt() {
     `【用途】${mode.label}｜${platform}`,
     `【平台規則】${platformHints[platform]}`,
     isOfficialMumuV3(characterCard) ? MUMU_V3_DUAL_REFERENCE : "",
+    window.mumuPeerReference?.hasFile?.() ? PEER_REFERENCE_RULES : "",
     ...cards.map((card) => `【${typeLabels[card.type]}｜${card.name}】${card.positive}`),
     `【${mode.label}品質與穩定規則】${mode.positive}`,
   ].filter(Boolean);
