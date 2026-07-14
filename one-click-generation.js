@@ -1,19 +1,95 @@
 const oneClickGenerationButton = document.querySelector("#oneClickGenerationButton");
 const oneClickStatus = document.querySelector("#copyStatus");
+const identityModeInputs = document.querySelectorAll('input[name="identityMode"]');
+const identityModeStatus = document.querySelector("#identityModeStatus");
+const positiveOutput = document.querySelector("#positiveOutput");
+const negativeOutput = document.querySelector("#negativeOutput");
+const fullOutput = document.querySelector("#fullOutput");
 
-function buildAttachedReferencePrompt(fullPrompt) {
-  const characterStart = fullPrompt.indexOf("\n\n【沐沐母卡｜");
-  if (characterStart < 0) return fullPrompt.trim();
+const COMPACT_REFERENCE_SECTION = "【沐沐官方母卡 V3｜身份參考】請以已附上的半身母卡與全身母卡作為唯一身份參考。半身母卡鎖定臉部與五官辨識，全身母卡鎖定身形比例與整體角色一致性；兩張皆為同一位沐沐，不得更換人物或重新設計角色。";
 
-  const nextSection = fullPrompt.indexOf("\n\n【", characterStart + 4);
-  const before = fullPrompt.slice(0, characterStart);
-  const after = nextSection >= 0 ? fullPrompt.slice(nextSection) : "";
-  return `${before}${after}`.trim();
+let rawPromptSnapshot = { positive: "", negative: "", full: "" };
+let applyingIdentityMode = false;
+
+function currentIdentityMode() {
+  return document.querySelector('input[name="identityMode"]:checked')?.value || "attached";
 }
 
+function removeSection(text, headingPrefix) {
+  const start = text.indexOf(`\n\n${headingPrefix}`);
+  if (start < 0) return text;
+  const next = text.indexOf("\n\n【", start + 4);
+  return `${text.slice(0, start)}${next >= 0 ? text.slice(next) : ""}`;
+}
+
+function compactAttachedPrompt(text) {
+  if (!text) return "";
+  let result = text;
+  result = result.replace(/【沐沐官方母卡 V3｜雙母卡身份參考規則】[^\n]*(?=\n\n|$)/, COMPACT_REFERENCE_SECTION);
+  result = removeSection(result, "【沐沐母卡｜");
+  return result.trim();
+}
+
+function captureRawOutputs() {
+  if (applyingIdentityMode) return;
+  rawPromptSnapshot = {
+    positive: positiveOutput?.value || "",
+    negative: negativeOutput?.value || "",
+    full: fullOutput?.value || ""
+  };
+}
+
+function applyIdentityMode() {
+  if (!positiveOutput || !negativeOutput || !fullOutput) return;
+  applyingIdentityMode = true;
+  const attached = currentIdentityMode() === "attached";
+
+  positiveOutput.value = attached ? compactAttachedPrompt(rawPromptSnapshot.positive) : rawPromptSnapshot.positive;
+  negativeOutput.value = rawPromptSnapshot.negative;
+  fullOutput.value = attached ? compactAttachedPrompt(rawPromptSnapshot.full) : rawPromptSnapshot.full;
+
+  if (identityModeStatus) {
+    identityModeStatus.textContent = attached ? "🟢 已附母卡（推薦）" : "🔵 未附母卡（完整文字設定）";
+  }
+  applyingIdentityMode = false;
+}
+
+function refreshAfterBuilderChange() {
+  window.setTimeout(() => {
+    captureRawOutputs();
+    applyIdentityMode();
+  }, 0);
+}
+
+identityModeInputs.forEach((input) => input.addEventListener("change", applyIdentityMode));
+document.querySelector("#builderForm")?.addEventListener("change", refreshAfterBuilderChange);
+document.querySelector("#selectors")?.addEventListener("change", refreshAfterBuilderChange);
+document.querySelector("#clearSelectionButton")?.addEventListener("click", refreshAfterBuilderChange);
+document.querySelector("#resetDataButton")?.addEventListener("click", () => window.setTimeout(refreshAfterBuilderChange, 500));
+
+// 覆蓋複製按鈕：已附母卡時複製精簡版；未附母卡時複製完整文字版。
+document.querySelectorAll(".copy-button").forEach((button) => {
+  button.addEventListener("click", async (event) => {
+    event.stopImmediatePropagation();
+    const key = button.dataset.copy;
+    const prompt = {
+      positive: positiveOutput?.value || "",
+      negative: negativeOutput?.value || "",
+      full: fullOutput?.value || ""
+    }[key];
+    await navigator.clipboard.writeText(prompt);
+    oneClickStatus.textContent = currentIdentityMode() === "attached" ? "已複製已附母卡版提示詞" : "已複製未附母卡版提示詞";
+    window.setTimeout(() => { oneClickStatus.textContent = ""; }, 1800);
+  }, true);
+});
+
 oneClickGenerationButton?.addEventListener("click", async () => {
-  const fullPrompt = document.querySelector("#fullOutput")?.value?.trim();
-  if (!fullPrompt) {
+  const attachedInput = document.querySelector('input[name="identityMode"][value="attached"]');
+  if (attachedInput) attachedInput.checked = true;
+  applyIdentityMode();
+
+  const prompt = fullOutput?.value?.trim();
+  if (!prompt) {
     oneClickStatus.textContent = "目前沒有可用提示詞";
     return;
   }
@@ -32,8 +108,7 @@ oneClickGenerationButton?.addEventListener("click", async () => {
       referenceToFile(full, "沐沐官方母卡V3-全身")
     ]);
 
-    const compactPrompt = buildAttachedReferencePrompt(fullPrompt);
-    await navigator.clipboard.writeText(compactPrompt);
+    await navigator.clipboard.writeText(prompt);
 
     if (!navigator.share || !navigator.canShare?.({ files })) {
       throw new Error("這個瀏覽器不支援直接分享兩張母卡；精簡提示詞已先複製");
@@ -42,7 +117,7 @@ oneClickGenerationButton?.addEventListener("click", async () => {
     oneClickStatus.textContent = "精簡提示詞已複製；請在分享面板選 ChatGPT";
     await navigator.share({
       files,
-      text: compactPrompt,
+      text: prompt,
       title: "沐沐生圖｜半身＋全身母卡"
     });
     oneClickStatus.textContent = "✅ 母卡已送出　📋 提示詞已複製　👉 到 ChatGPT 貼上即可";
@@ -57,3 +132,11 @@ oneClickGenerationButton?.addEventListener("click", async () => {
     oneClickGenerationButton.disabled = false;
   }
 });
+
+// app.js 會非同步載入雲端卡片；等提示詞第一次出現後再套用預設的已附母卡模式。
+const initialSync = window.setInterval(() => {
+  if (!fullOutput?.value) return;
+  window.clearInterval(initialSync);
+  captureRawOutputs();
+  applyIdentityMode();
+}, 100);
