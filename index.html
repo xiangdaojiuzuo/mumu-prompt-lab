@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>沐沐提示詞管理器</title>
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
 <main class="app-shell">
@@ -25,7 +25,7 @@
         <h2>提示詞積木</h2>
       </div>
       <details class="studio-block studio-block-settings" data-studio-block="settings" open>
-        <summary><span class="studio-block-title"><span aria-hidden="true">🎯</span> 生圖設定</span><span class="studio-chevron" aria-hidden="true"></span></summary>
+        <summary><span class="studio-summary-copy"><span class="studio-block-title"><span aria-hidden="true">🎯</span> 生圖設定</span><small id="studioSummary-settings" class="studio-summary">生圖｜ChatGPT｜已附母卡</small></span><span class="studio-chevron" aria-hidden="true"></span></summary>
         <div class="studio-block-content">
           <div class="segmented" role="group" aria-label="模式切換"><label><input type="radio" name="mode" value="image" checked /><span>生圖</span></label><label><input type="radio" name="mode" value="video" /><span>生影片</span></label></div>
           <label class="field-label" for="platformSelect">平台</label><select id="platformSelect" name="platform"><option>ChatGPT</option><option>Grok</option><option>Flow</option><option>Veo</option></select>
@@ -36,7 +36,7 @@
       </details>
       <div id="selectors" class="studio-block-stack"></div>
       <details class="studio-block studio-block-quality" data-studio-block="quality">
-        <summary><span class="studio-block-title"><span aria-hidden="true">✨</span> 品質</span><span class="studio-chevron" aria-hidden="true"></span></summary>
+        <summary><span class="studio-summary-copy"><span class="studio-block-title"><span aria-hidden="true">✨</span> 品質</span><small id="studioSummary-quality" class="studio-summary">生圖品質｜自動套用</small></span><span class="studio-chevron" aria-hidden="true"></span></summary>
         <div class="studio-block-content">
           <p class="studio-fixed-note">依照生圖或生影片模式，自動套用目前既有的品質、穩定與負向提示詞規則。</p>
         </div>
@@ -54,7 +54,7 @@
     <div id="cardLists" class="card-lists"></div>
   </section>
 </main>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 <script src="image-library.js?v=6"></script>
 <script src="share-launcher.js?v=1"></script>
 <script src="one-click-generation.js?v=2"></script>

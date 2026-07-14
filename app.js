@@ -156,9 +156,28 @@ function renderSelectors() {
   const openByDefault = !window.matchMedia("(max-width: 560px)").matches;
   selectors.innerHTML = blocks.map((block) => `
     <details class="studio-block studio-block-${block.key}" data-studio-block="${block.key}" ${openByDefault ? "open" : ""}>
-      <summary><span class="studio-block-title"><span aria-hidden="true">${block.icon}</span> ${block.title}</span><span class="studio-chevron" aria-hidden="true"></span></summary>
+      <summary><span class="studio-summary-copy"><span class="studio-block-title"><span aria-hidden="true">${block.icon}</span> ${block.title}</span><small id="studioSummary-${block.key}" class="studio-summary">尚未選擇</small></span><span class="studio-chevron" aria-hidden="true"></span></summary>
       <div class="studio-block-content studio-selector-content">${block.types.map(selectorField).join("")}</div>
     </details>`).join("");
+}
+
+function selectedCardName(type) {
+  return state.cards.find((card) => card.id === String(state.selections[type] || ""))?.name || "";
+}
+
+function setStudioSummary(key, value) {
+  const summary = document.querySelector(`#studioSummary-${key}`);
+  if (summary) summary.textContent = value || "尚未選擇";
+}
+
+function updateStudioSummaries() {
+  const identityMode = document.querySelector('input[name="identityMode"]:checked')?.value === "unattached" ? "未附母卡" : "已附母卡";
+  setStudioSummary("settings", `${modeHints[state.mode].label}｜${state.platform}｜${identityMode}`);
+  setStudioSummary("character", [selectedCardName("character"), selectedCardName("angle")].filter(Boolean).join("｜"));
+  setStudioSummary("expression", selectedCardName("expression"));
+  setStudioSummary("outfit", selectedCardName("outfit"));
+  setStudioSummary("scene", selectedCardName("scene"));
+  setStudioSummary("quality", `${modeHints[state.mode].label}品質｜自動套用`);
 }
 
 function applyAccordionDefaults() {
@@ -194,7 +213,7 @@ function renderCardLists() {
 function renderAll() {
   document.querySelector(`[name="mode"][value="${state.mode}"]`).checked = true;
   document.querySelector("#platformSelect").value = state.platform;
-  renderSelectors(); renderOutputs(); renderCardTypes(); renderCardLists();
+  renderSelectors(); renderOutputs(); renderCardTypes(); renderCardLists(); updateStudioSummaries();
 }
 
 function resetForm() {
@@ -209,7 +228,7 @@ selectors.addEventListener("change", (event) => {
   const type = event.target.dataset.selector;
   if (!type) return;
   state.selections[type] = event.target.value;
-  persistLocal(); renderOutputs();
+  persistLocal(); renderOutputs(); updateStudioSummaries();
 });
 
 document.querySelector("#builderForm").addEventListener("toggle", (event) => {
@@ -225,7 +244,7 @@ window.matchMedia("(max-width: 560px)").addEventListener("change", applyAccordio
 document.querySelector("#builderForm").addEventListener("change", (event) => {
   if (event.target.name === "mode") state.mode = event.target.value;
   if (event.target.name === "platform") state.platform = event.target.value;
-  persistLocal(); renderOutputs();
+  persistLocal(); renderOutputs(); updateStudioSummaries();
 });
 
 document.querySelectorAll(".copy-button").forEach((button) => button.addEventListener("click", async () => {
