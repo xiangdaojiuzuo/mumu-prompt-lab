@@ -99,17 +99,43 @@ const cardHeaders = {
 };
 
 function loadLocalState() {
-  const fallback = { cards: [], selections: {}, mode: "image", platform: "ChatGPT", outfitCategory: "", catalogOutfit: "", customOutfit: {}, customScene: {}, customAction: {} };
+  const recommendedExamples = {
+    customOutfit: {
+      top: "白色短袖上衣",
+      bottom: "淺藍牛仔短褲",
+      outer: "薄款防曬襯衫",
+      accessory: "涼鞋、草帽"
+    },
+    customScene: {
+      place: "海邊",
+      detail: "夏日下午，陽光明亮，清澈海水與自然浪花"
+    },
+    customAction: {
+      main: "在海邊淺水區開心玩水，雙手輕輕撥起水花",
+      detail: "身體自然微微前傾，看向鏡頭，水花停在動作瞬間"
+    }
+  };
+  const fallback = {
+    cards: [], selections: {}, mode: "image", platform: "ChatGPT", outfitCategory: "", catalogOutfit: "",
+    ...recommendedExamples,
+    recommendedExamplesVersion: 1
+  };
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return { ...fallback, ...stored, cards: [], selections: stored?.selections || {}, customOutfit: stored?.customOutfit || {}, customScene: stored?.customScene || {}, customAction: stored?.customAction || {} };
+    const keepSavedValues = stored?.recommendedExamplesVersion === 1;
+    const exampleState = Object.fromEntries(Object.entries(recommendedExamples).map(([section, defaults]) => {
+      if (keepSavedValues) return [section, stored?.[section] || {}];
+      const saved = stored?.[section] || {};
+      return [section, Object.fromEntries(Object.entries(defaults).map(([key, value]) => [key, String(saved[key] || "").trim() ? saved[key] : value]))];
+    }));
+    return { ...fallback, ...stored, ...exampleState, cards: [], selections: stored?.selections || {}, recommendedExamplesVersion: 1 };
   } catch {
     return fallback;
   }
 }
 
 function persistLocal(message = "選擇已保存") {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ selections: state.selections, mode: state.mode, platform: state.platform, outfitCategory: state.outfitCategory, catalogOutfit: state.catalogOutfit, customOutfit: state.customOutfit, customScene: state.customScene, customAction: state.customAction }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ selections: state.selections, mode: state.mode, platform: state.platform, outfitCategory: state.outfitCategory, catalogOutfit: state.catalogOutfit, customOutfit: state.customOutfit, customScene: state.customScene, customAction: state.customAction, recommendedExamplesVersion: state.recommendedExamplesVersion }));
   saveStatus.textContent = message;
 }
 
@@ -196,9 +222,9 @@ function renderSelectors() {
   const activeCategory = OUTFIT_CATALOG.find((category) => category.name === state.outfitCategory);
   const catalogOutfitOptions = (activeCategory?.items || []).map((name) => `<option value="${escapeHtml(name)}" ${state.catalogOutfit === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("");
   const customControls = {
-    outfit: `<div class="custom-builder"><p class="custom-builder-title">沐沐服裝資料庫 v1.1</p><label>服裝分類<select data-outfit-category><option value="">選擇分類</option>${catalogCategoryOptions}</select></label><label>服裝款式<select data-catalog-outfit ${activeCategory ? "" : "disabled"}><option value="">選擇服裝</option>${catalogOutfitOptions}</select></label><p class="custom-builder-divider">或自行搭配（填寫後優先套用）</p><div class="custom-field-grid"><label>上身<input data-custom-outfit="top" value="${escapeHtml(state.customOutfit.top || "")}" placeholder="例如：白色短袖上衣" /></label><label>下身<input data-custom-outfit="bottom" value="${escapeHtml(state.customOutfit.bottom || "")}" placeholder="例如：淺藍牛仔短褲" /></label><label>外搭<input data-custom-outfit="outer" value="${escapeHtml(state.customOutfit.outer || "")}" placeholder="例如：薄款防曬襯衫" /></label><label>鞋子／配件<input data-custom-outfit="accessory" value="${escapeHtml(state.customOutfit.accessory || "")}" placeholder="例如：涼鞋、草帽" /></label></div></div>`,
-    scene: `<div class="custom-builder"><p class="custom-builder-divider">或使用其他地點（填寫後優先套用）</p><label>自訂場景<input data-custom-scene="place" value="${escapeHtml(state.customScene.place || "")}" placeholder="例如：海邊、水上樂園、泳池" /></label><label>場景細節<textarea data-custom-scene="detail" placeholder="例如：夏日下午、度假村泳池、清澈水面">${escapeHtml(state.customScene.detail || "")}</textarea></label><p class="custom-builder-note">使用自訂場景時，不會附上沐沐家官方設定圖。</p></div>`,
-    action: `<div class="custom-builder action-builder"><label>要讓沐沐做什麼<textarea data-custom-action="main" placeholder="例如：在海邊淺水區開心玩水，雙手輕輕撥起水花">${escapeHtml(state.customAction.main || "")}</textarea></label><label>動作細節（選填）<textarea data-custom-action="detail" placeholder="例如：身體自然微微前傾，看向鏡頭，水花停在動作瞬間">${escapeHtml(state.customAction.detail || "")}</textarea></label></div>`
+    outfit: `<div class="custom-builder"><p class="custom-builder-title">沐沐服裝資料庫 v1.1</p><label>服裝分類<select data-outfit-category><option value="">選擇分類</option>${catalogCategoryOptions}</select></label><label>服裝款式<select data-catalog-outfit ${activeCategory ? "" : "disabled"}><option value="">選擇服裝</option>${catalogOutfitOptions}</select></label><p class="custom-builder-divider">或自行搭配（填寫後優先套用）</p><p class="custom-builder-note">推薦搭配已直接保留，可原樣使用，也可以刪除或改寫。</p><div class="custom-field-grid"><label>上身<input data-custom-outfit="top" value="${escapeHtml(state.customOutfit.top || "")}" /></label><label>下身<input data-custom-outfit="bottom" value="${escapeHtml(state.customOutfit.bottom || "")}" /></label><label>外搭<input data-custom-outfit="outer" value="${escapeHtml(state.customOutfit.outer || "")}" /></label><label>鞋子／配件<input data-custom-outfit="accessory" value="${escapeHtml(state.customOutfit.accessory || "")}" /></label></div></div>`,
+    scene: `<div class="custom-builder"><p class="custom-builder-divider">或使用其他地點（填寫後優先套用）</p><p class="custom-builder-note">推薦場景已直接保留，可原樣使用，也可以刪除或改寫。</p><label>自訂場景<input data-custom-scene="place" value="${escapeHtml(state.customScene.place || "")}" /></label><label>場景細節<textarea data-custom-scene="detail">${escapeHtml(state.customScene.detail || "")}</textarea></label><p class="custom-builder-note">使用自訂場景時，不會附上沐沐家官方設定圖。</p></div>`,
+    action: `<div class="custom-builder action-builder"><p class="custom-builder-note">例句已直接保留，可原樣使用，也可以刪除或改寫。</p><label>要讓沐沐做什麼<textarea data-custom-action="main">${escapeHtml(state.customAction.main || "")}</textarea></label><label>動作細節（選填）<textarea data-custom-action="detail">${escapeHtml(state.customAction.detail || "")}</textarea></label></div>`
   };
   selectors.innerHTML = blocks.map((block) => `
     <details class="studio-block studio-block-${block.key}" data-studio-block="${block.key}" ${openByDefault ? "open" : ""}>
@@ -282,14 +308,26 @@ selectors.addEventListener("change", (event) => {
   }
   if (event.target.matches("[data-catalog-outfit]")) {
     state.catalogOutfit = event.target.value;
-    if (state.catalogOutfit) state.selections.outfit = "";
+    if (state.catalogOutfit) {
+      state.selections.outfit = "";
+      state.customOutfit = {};
+      document.querySelectorAll("[data-custom-outfit]").forEach((field) => { field.value = ""; });
+    }
     persistLocal(); renderOutputs(); updateStudioSummaries();
     return;
   }
   const type = event.target.dataset.selector;
   if (!type) return;
   state.selections[type] = event.target.value;
-  if (type === "outfit" && event.target.value) state.catalogOutfit = "";
+  if (type === "outfit" && event.target.value) {
+    state.catalogOutfit = "";
+    state.customOutfit = {};
+    document.querySelectorAll("[data-custom-outfit]").forEach((field) => { field.value = ""; });
+  }
+  if (type === "scene" && event.target.value) {
+    state.customScene = {};
+    document.querySelectorAll("[data-custom-scene]").forEach((field) => { field.value = ""; });
+  }
   persistLocal(); renderOutputs(); updateStudioSummaries();
 });
 
