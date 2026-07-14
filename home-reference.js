@@ -26,7 +26,12 @@
     "衛浴外區": "p6"
   };
 
+  function hasCustomScene() {
+    return [...document.querySelectorAll("[data-custom-scene]")].some((field) => field.value.trim());
+  }
+
   function selectedSceneName() {
+    if (hasCustomScene()) return "";
     return document.querySelector('[data-selector="scene"]')?.selectedOptions?.[0]?.textContent?.trim() || "";
   }
 
@@ -50,7 +55,9 @@
     if (!status) return;
     const scene = selectedSceneName();
     const active = getActiveReferences();
-    status.textContent = active.length
+    status.textContent = hasCustomScene()
+      ? "目前使用自訂場景｜不會附上沐沐家官方設定圖。"
+      : active.length
       ? `目前場景：${scene}｜一鍵生圖會自動附上：全屋大局觀＋${active[1].phase} ${active[1].title}`
       : "選擇沐沐家場景後，網站會自動套用全屋大局觀與對應區域 P 圖。";
   }

@@ -10,6 +10,22 @@ const typeLabels = {
   scene: "場景卡",
 };
 
+const OUTFIT_CATALOG = [
+  { name: "🎓 校園系", items: ["制服女生", "學姊風", "學妹風", "圖書館委員", "風紀委員", "社團學姐", "啦啦隊"] },
+  { name: "☕ 女僕／服務業系", items: ["經典女僕", "日式女僕", "咖啡廳店員", "甜點店店員", "花店店員", "書店店員", "酒吧服務生", "居酒屋店員"] },
+  { name: "🎎 日式文化系", items: ["巫女", "浴衣", "和服", "茶道女孩", "劍道少女", "神社看板娘"] },
+  { name: "💼 職業系", items: ["空服員", "護理師", "女警", "偵探", "律師", "OL上班族", "秘書", "攝影師"] },
+  { name: "⚔️ 奇幻冒險系", items: ["精靈", "魔法師", "女祭司", "聖女", "吟遊詩人", "弓箭手", "冒險者", "公爵千金"] },
+  { name: "🎮 遊戲／動漫風格系", items: ["RPG勇者隊成員", "魔法少女", "偶像歌手", "學園偶像", "虛擬主播風", "貓耳娘", "狐耳娘", "狼耳少女"] },
+  { name: "🎄 節慶主題系", items: ["聖誕女孩", "萬聖節魔女", "南瓜精靈", "新年和服", "情人節主題", "夏日祭典"] },
+  { name: "⚽ 運動系", items: ["啦啦隊", "網球少女", "棒球女孩", "羽球少女", "高爾夫女孩", "賽車應援女孩"] },
+  { name: "🏠 休閒生活系", items: ["寬鬆居家服", "圍裙料理系", "咖啡館約會風", "露營女孩", "旅館浴衣", "海邊度假風"] },
+  { name: "🏯 擴充｜修仙／東方奇幻系", items: ["修仙師姐", "宗門聖女", "狐仙", "龍娘"] },
+  { name: "👑 擴充｜西方奇幻系", items: ["王國公主", "公爵夫人", "女武神", "鍊金術師"] },
+  { name: "⚔️ 擴充｜冒險系", items: ["賞金獵人"] },
+  { name: "🤖 擴充｜科幻風格系", items: ["蒸氣龐克少女", "賽博龐克少女"] }
+];
+
 const defaultCards = [
   {
     id: "character-mumu-official-v3",
@@ -81,17 +97,17 @@ const cardHeaders = {
 };
 
 function loadLocalState() {
-  const fallback = { cards: [], selections: {}, mode: "image", platform: "ChatGPT" };
+  const fallback = { cards: [], selections: {}, mode: "image", platform: "ChatGPT", outfitCategory: "", catalogOutfit: "", customOutfit: {}, customScene: {} };
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return { ...fallback, selections: stored?.selections || {}, mode: stored?.mode || "image", platform: stored?.platform || "ChatGPT" };
+    return { ...fallback, ...stored, cards: [], selections: stored?.selections || {}, customOutfit: stored?.customOutfit || {}, customScene: stored?.customScene || {} };
   } catch {
     return fallback;
   }
 }
 
 function persistLocal(message = "選擇已保存") {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ selections: state.selections, mode: state.mode, platform: state.platform }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ selections: state.selections, mode: state.mode, platform: state.platform, outfitCategory: state.outfitCategory, catalogOutfit: state.catalogOutfit, customOutfit: state.customOutfit, customScene: state.customScene }));
   saveStatus.textContent = message;
 }
 
@@ -125,9 +141,16 @@ async function loadCloudCards() {
 function byType(type) { return state.cards.filter((card) => card.type === type); }
 function selectedCards() { return Object.keys(typeLabels).map((type) => state.cards.find((card) => card.id === String(state.selections[type]))).filter(Boolean); }
 function isOfficialMumuV3(card) { return card?.type === "character" && /沐沐官方母卡\s*v?3(?:\.0)?/i.test(card.name || ""); }
+function customOutfitText() {
+  const labels = { top: "上身", bottom: "下身", outer: "外搭", accessory: "鞋子／配件" };
+  return Object.entries(labels).map(([key, label]) => state.customOutfit?.[key]?.trim() ? `${label}：${state.customOutfit[key].trim()}` : "").filter(Boolean).join("；");
+}
+function customSceneText() { return Object.values(state.customScene || {}).map((value) => String(value || "").trim()).filter(Boolean).join("；"); }
 
 function buildPrompt() {
-  const cards = selectedCards();
+  const customOutfit = customOutfitText();
+  const customScene = customSceneText();
+  const cards = selectedCards().filter((card) => !(card.type === "outfit" && (customOutfit || state.catalogOutfit)) && !(card.type === "scene" && customScene));
   const mode = modeHints[state.mode];
   const platform = state.platform;
   const characterCard = cards.find((card) => card.type === "character");
@@ -138,6 +161,8 @@ function buildPrompt() {
     window.mumuHomeReference?.hasActiveReference?.() ? HOME_REFERENCE_RULES : "",
     window.mumuPeerReference?.hasFile?.() ? PEER_REFERENCE_RULES : "",
     ...cards.map((card) => `【${typeLabels[card.type]}｜${card.name}】${card.positive}`),
+    customOutfit ? `【自訂服裝】${customOutfit}；維持真實衣料紋理、自然皺褶、張力與符合重力的垂墜` : (state.catalogOutfit ? `【沐沐服裝資料庫｜${state.catalogOutfit}】沐沐穿著${state.catalogOutfit}風格的完整穿搭，款式特徵清楚，衣料物理自然真實` : ""),
+    customScene ? `【自訂場景】${customScene}；以此場景為唯一背景設定，不套用沐沐家室內格局` : "",
     `【${mode.label}品質與穩定規則】${mode.positive}`,
   ].filter(Boolean);
   const negativeParts = [...cards.map((card) => card.negative), mode.negative].filter(Boolean);
@@ -158,10 +183,17 @@ function renderSelectors() {
     { key: "scene", step: 5, icon: "🌸", title: "場景", types: ["scene"] },
   ];
   const openByDefault = !window.matchMedia("(max-width: 560px)").matches;
+  const catalogCategoryOptions = OUTFIT_CATALOG.map((category) => `<option value="${escapeHtml(category.name)}" ${state.outfitCategory === category.name ? "selected" : ""}>${escapeHtml(category.name)}</option>`).join("");
+  const activeCategory = OUTFIT_CATALOG.find((category) => category.name === state.outfitCategory);
+  const catalogOutfitOptions = (activeCategory?.items || []).map((name) => `<option value="${escapeHtml(name)}" ${state.catalogOutfit === name ? "selected" : ""}>${escapeHtml(name)}</option>`).join("");
+  const customControls = {
+    outfit: `<div class="custom-builder"><p class="custom-builder-title">沐沐服裝資料庫 v1.1</p><label>服裝分類<select data-outfit-category><option value="">選擇分類</option>${catalogCategoryOptions}</select></label><label>服裝款式<select data-catalog-outfit ${activeCategory ? "" : "disabled"}><option value="">選擇服裝</option>${catalogOutfitOptions}</select></label><p class="custom-builder-divider">或自行搭配（填寫後優先套用）</p><div class="custom-field-grid"><label>上身<input data-custom-outfit="top" value="${escapeHtml(state.customOutfit.top || "")}" placeholder="例如：白色短袖上衣" /></label><label>下身<input data-custom-outfit="bottom" value="${escapeHtml(state.customOutfit.bottom || "")}" placeholder="例如：淺藍牛仔短褲" /></label><label>外搭<input data-custom-outfit="outer" value="${escapeHtml(state.customOutfit.outer || "")}" placeholder="例如：薄款防曬襯衫" /></label><label>鞋子／配件<input data-custom-outfit="accessory" value="${escapeHtml(state.customOutfit.accessory || "")}" placeholder="例如：涼鞋、草帽" /></label></div></div>`,
+    scene: `<div class="custom-builder"><p class="custom-builder-divider">或使用其他地點（填寫後優先套用）</p><label>自訂場景<input data-custom-scene="place" value="${escapeHtml(state.customScene.place || "")}" placeholder="例如：海邊、水上樂園、泳池" /></label><label>場景細節<textarea data-custom-scene="detail" placeholder="例如：夏日下午、度假村泳池、清澈水面">${escapeHtml(state.customScene.detail || "")}</textarea></label><p class="custom-builder-note">使用自訂場景時，不會附上沐沐家官方設定圖。</p></div>`
+  };
   selectors.innerHTML = blocks.map((block) => `
     <details class="studio-block studio-block-${block.key}" data-studio-block="${block.key}" ${openByDefault ? "open" : ""}>
       <summary><span class="studio-summary-copy"><span class="studio-block-title"><span class="studio-step" aria-hidden="true">${block.step}</span><span><span aria-hidden="true">${block.icon}</span> ${block.title}</span></span><small id="studioSummary-${block.key}" class="studio-summary">尚未選擇</small></span><span class="studio-chevron" aria-hidden="true"></span></summary>
-      <div class="studio-block-content studio-selector-content">${block.types.map(selectorField).join("")}</div>
+      <div class="studio-block-content studio-selector-content">${block.types.map(selectorField).join("")}${customControls[block.key] || ""}</div>
     </details>`).join("");
 }
 
@@ -179,8 +211,8 @@ function updateStudioSummaries() {
   setStudioSummary("settings", `${modeHints[state.mode].label}｜${state.platform}｜${identityMode}`);
   setStudioSummary("character", [selectedCardName("character"), selectedCardName("angle")].filter(Boolean).join("｜"));
   setStudioSummary("expression", selectedCardName("expression"));
-  setStudioSummary("outfit", selectedCardName("outfit"));
-  setStudioSummary("scene", selectedCardName("scene"));
+  setStudioSummary("outfit", customOutfitText() ? `自訂｜${customOutfitText()}` : (state.catalogOutfit || selectedCardName("outfit")));
+  setStudioSummary("scene", customSceneText() ? `自訂｜${customSceneText()}` : selectedCardName("scene"));
   setStudioSummary("quality", `${modeHints[state.mode].label}品質｜自動套用`);
 }
 
@@ -229,10 +261,35 @@ function resetForm() {
 function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char])); }
 
 selectors.addEventListener("change", (event) => {
+  if (event.target.matches("[data-outfit-category]")) {
+    state.outfitCategory = event.target.value;
+    state.catalogOutfit = "";
+    persistLocal(); renderSelectors(); updateStudioSummaries();
+    const outfitBlock = document.querySelector('[data-studio-block="outfit"]');
+    if (outfitBlock) outfitBlock.open = true;
+    return;
+  }
+  if (event.target.matches("[data-catalog-outfit]")) {
+    state.catalogOutfit = event.target.value;
+    if (state.catalogOutfit) state.selections.outfit = "";
+    persistLocal(); renderOutputs(); updateStudioSummaries();
+    return;
+  }
   const type = event.target.dataset.selector;
   if (!type) return;
   state.selections[type] = event.target.value;
+  if (type === "outfit" && event.target.value) state.catalogOutfit = "";
   persistLocal(); renderOutputs(); updateStudioSummaries();
+});
+
+selectors.addEventListener("input", (event) => {
+  const outfitField = event.target.dataset.customOutfit;
+  const sceneField = event.target.dataset.customScene;
+  if (!outfitField && !sceneField) return;
+  if (outfitField) state.customOutfit[outfitField] = event.target.value;
+  if (sceneField) state.customScene[sceneField] = event.target.value;
+  persistLocal(); renderOutputs(); updateStudioSummaries(); window.mumuHomeReference?.sync?.();
+  document.querySelector("#builderForm").dispatchEvent(new Event("change", { bubbles: true }));
 });
 
 document.querySelector("#builderForm").addEventListener("toggle", (event) => {
@@ -259,7 +316,7 @@ document.querySelectorAll(".copy-button").forEach((button) => button.addEventLis
 }));
 
 document.querySelector("#clearSelectionButton").addEventListener("click", () => {
-  state.selections = {}; persistLocal("已清空目前選擇"); renderAll();
+  state.selections = {}; state.outfitCategory = ""; state.catalogOutfit = ""; state.customOutfit = {}; state.customScene = {}; persistLocal("已清空目前選擇"); renderAll();
 });
 
 document.querySelector("#resetDataButton").addEventListener("click", async () => {
@@ -271,6 +328,10 @@ document.querySelector("#resetDataButton").addEventListener("click", async () =>
     const cards = await cardRequest("", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify(seed) });
     state.cards = cards.map(normalizeCard);
     state.selections = {};
+    state.outfitCategory = "";
+    state.catalogOutfit = "";
+    state.customOutfit = {};
+    state.customScene = {};
     persistLocal("已重設為沐沐官方雲端資料"); resetForm(); renderAll();
   } catch (error) {
     console.error(error);
