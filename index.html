@@ -20,7 +20,14 @@
   </section>
   <section class="workspace" aria-label="提示詞組合工作區">
     <form class="control-panel" id="builderForm">
-      <section class="panel-card"><h2>基本設定</h2><div class="segmented" role="group" aria-label="模式切換"><label><input type="radio" name="mode" value="image" checked /><span>生圖</span></label><label><input type="radio" name="mode" value="video" /><span>生影片</span></label></div><label class="field-label" for="platformSelect">平台</label><select id="platformSelect" name="platform"><option>ChatGPT</option><option>Grok</option><option>Flow</option><option>Veo</option></select></section>
+      <section class="panel-card">
+        <h2>基本設定</h2>
+        <div class="segmented" role="group" aria-label="模式切換"><label><input type="radio" name="mode" value="image" checked /><span>生圖</span></label><label><input type="radio" name="mode" value="video" /><span>生影片</span></label></div>
+        <label class="field-label" for="platformSelect">平台</label><select id="platformSelect" name="platform"><option>ChatGPT</option><option>Grok</option><option>Flow</option><option>Veo</option></select>
+        <p class="field-label" style="margin:18px 0 8px">身份模式</p>
+        <div class="segmented" role="group" aria-label="身份模式切換"><label><input type="radio" name="identityMode" value="attached" checked /><span>已附母卡</span></label><label><input type="radio" name="identityMode" value="unattached" /><span>未附母卡</span></label></div>
+        <p id="identityModeStatus" class="hero-copy" style="margin:0">🟢 已附母卡（推薦）</p>
+      </section>
       <section class="panel-card"><h2>卡片選擇</h2><div id="selectors" class="selector-grid"></div></section>
     </form>
     <section class="output-panel" aria-label="提示詞輸出">
@@ -38,6 +45,6 @@
 <script src="app.js?v=5"></script>
 <script src="image-library.js?v=6"></script>
 <script src="share-launcher.js?v=1"></script>
-<script src="one-click-generation.js?v=1"></script>
+<script src="one-click-generation.js?v=2"></script>
 </body>
 </html>
