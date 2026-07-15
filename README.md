@@ -14,6 +14,12 @@
 - 使用 localStorage 保存資料，重新整理後仍保留
 - 支援桌面與手機版面
 
+## Prompt Lab 2.0 擴充骨架
+
+`studio-v2/` 已建立獨立的模組化架構、功能開關、素材與圖層資料契約、Renderer Interface、Plugin Interface，以及 Prompt Builder 擴充資料層。所有 2.0 功能預設關閉，因此不會改變目前 Prompt Lab 1.0 的畫面與操作流程。
+
+詳細邊界與啟用方式請見 `studio-v2/README.md`。
+
 ## 預覽方式
 
 在專案根目錄執行：
