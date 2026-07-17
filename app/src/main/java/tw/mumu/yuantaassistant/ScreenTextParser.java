@@ -46,6 +46,8 @@ final class ScreenTextParser {
 
         Double bestBid = findTopPriceInRegion(tokens, 0.26f, 0.69f, 0.49f, 0.88f);
         Double bestAsk = findTopPriceInRegion(tokens, 0.50f, 0.69f, 0.75f, 0.88f);
+        Double bidTotal = findBottomIntegerInRegion(tokens, 0.01f, 0.79f, 0.25f, 0.91f);
+        Double askTotal = findBottomIntegerInRegion(tokens, 0.78f, 0.79f, 0.99f, 0.91f);
 
         int confidence = 0;
         if (symbol != null) confidence += 2;
@@ -69,7 +71,7 @@ final class ScreenTextParser {
 
         return new MarketSnapshot(symbol, price, open, high, low, percent,
                 ma5, ma10, ma20, macd, kdK, kdD, bestBid, bestAsk,
-                screenMode, confidence);
+                bidTotal, askTotal, screenMode, confidence);
     }
 
     private static String normalize(String source) {
@@ -141,6 +143,18 @@ final class ScreenTextParser {
                 .orElse(null);
     }
 
+    private static Double findBottomIntegerInRegion(List<OcrToken> tokens,
+                                                     float left, float top,
+                                                     float right, float bottom) {
+        return tokens.stream()
+                .filter(token -> token.inside(left, top, right, bottom))
+                .sorted((a, b) -> Float.compare(b.centerY, a.centerY))
+                .map(token -> parseInteger(token.text))
+                .filter(value -> value != null && value >= 0)
+                .findFirst()
+                .orElse(null);
+    }
+
     private static String findSymbol(String text) {
         String[] lines = text.split("\\R");
         for (int i = 0; i < Math.min(lines.length, 14); i++) {
@@ -195,6 +209,12 @@ final class ScreenTextParser {
     private static Double firstDecimal(String value) {
         Matcher matcher = DECIMAL.matcher(value);
         return matcher.find() ? parseNumber(matcher.group(1)) : null;
+    }
+
+    private static Double parseInteger(String value) {
+        Matcher matcher = Pattern.compile("(?<!\\d)([0-9][0-9,]{0,8})(?!\\d)").matcher(value);
+        if (!matcher.find()) return null;
+        return parseNumber(matcher.group(1).replace(",", ""));
     }
 
     private static Double parseNumber(String value) {

@@ -15,16 +15,33 @@ final class YuantaLayoutDetector {
         if (text.contains("買進") && text.contains("賣出") && text.contains("庫存")) {
             return MarketSnapshot.ScreenMode.ORDER;
         }
-        if (text.contains("委買量") || text.contains("買價") && text.contains("賣價")) {
+        int mainTab = selectedMainTab(bitmap);
+        if (mainTab == 0 || text.contains("委買量") || text.contains("買價") && text.contains("賣價")) {
             return MarketSnapshot.ScreenMode.QUOTE;
         }
-        if (text.contains("均價5") || text.contains("布林") || text.contains("MACD")) {
+        if (mainTab == 1) return MarketSnapshot.ScreenMode.TRADES;
+        if (mainTab == 2 || text.contains("均價5") || text.contains("布林") || text.contains("MACD")) {
             int selected = selectedTimeframe(bitmap);
             if (selected == 0) return MarketSnapshot.ScreenMode.KLINE_1M;
             if (selected == 1) return MarketSnapshot.ScreenMode.KLINE_5M;
             return MarketSnapshot.ScreenMode.KLINE;
         }
         return MarketSnapshot.ScreenMode.UNKNOWN;
+    }
+
+    private static int selectedMainTab(Bitmap bitmap) {
+        float[] centers = {0.16f, 0.38f, 0.58f, 0.78f};
+        int bestIndex = -1;
+        int bestScore = 0;
+        for (int i = 0; i < centers.length; i++) {
+            int score = cyanScore(bitmap, centers[i] - 0.075f, 0.183f,
+                    centers[i] + 0.075f, 0.222f);
+            if (score > bestScore) {
+                bestScore = score;
+                bestIndex = i;
+            }
+        }
+        return bestScore >= 35 ? bestIndex : -1;
     }
 
     private static int selectedTimeframe(Bitmap bitmap) {

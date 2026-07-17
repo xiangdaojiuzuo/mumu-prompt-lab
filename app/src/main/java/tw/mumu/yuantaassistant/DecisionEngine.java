@@ -1,42 +1,52 @@
 package tw.mumu.yuantaassistant;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
 import java.util.Locale;
 
 final class DecisionEngine {
+    private static final long CACHE_WINDOW_MS = 8_000L;
+
     private final Deque<MarketSnapshot> history = new ArrayDeque<>();
     private String currentSymbol;
     private MarketSnapshot lastOneMinute;
     private MarketSnapshot lastFiveMinute;
+    private long lastGoodAt;
+    private TradeDecision lastDecision;
+    private int consecutiveMisses;
 
     TradeDecision update(MarketSnapshot now, double cost) {
-        if (now.symbol == null || now.price == null || now.confidence < 5) {
-            return unknown("請停在個股報價或 K 線頁面，等待辨識價格");
-        }
+        if (!isUsable(now)) return cachedOrUnknown(now, "本次 OCR 沒有完整讀到代號或現價");
 
         if (!now.symbol.equals(currentSymbol)) {
-            history.clear();
-            currentSymbol = now.symbol;
-            lastOneMinute = null;
-            lastFiveMinute = null;
+            resetForSymbol(now.symbol);
         }
 
         MarketSnapshot previous = history.peekLast();
         if (previous != null) {
             double jump = Math.abs(now.price / previous.price - 1d) * 100d;
             if (jump > 15d) {
-                return unknown("價格辨識跳動 " + fmt(jump) + "%｜本次資料已略過");
+                return cachedOrUnknown(now, "價格跳動 " + fmt(jump) + "% 已自動略過");
             }
         }
         if (now.high != null && now.low != null
                 && (now.price > now.high * 1.02d || now.price < now.low * 0.98d)) {
-            return unknown("現價與今日高低不一致｜本次資料已略過");
+            return cachedOrUnknown(now, "現價與今日高低矛盾，本次讀值已略過");
         }
 
+        consecutiveMisses = 0;
+        lastGoodAt = now.capturedAt;
+        TradeDecision decision = evaluate(now, cost);
+        lastDecision = decision;
+        return decision;
+    }
+
+    private TradeDecision evaluate(MarketSnapshot now, double cost) {
         history.addLast(now);
         while (history.size() > 60) history.removeFirst();
-        while (!history.isEmpty() && now.capturedAt - history.peekFirst().capturedAt > 60_000) {
+        while (!history.isEmpty() && now.capturedAt - history.peekFirst().capturedAt > 60_000L) {
             history.removeFirst();
         }
 
@@ -46,129 +56,232 @@ final class DecisionEngine {
         if (cost > 0) {
             double pnl = (now.price / cost - 1d) * 100d;
             if (pnl <= -1.5d) {
-                return decision(TradeDecision.Signal.SELL, "🔴 停損警示",
-                        now, "已低於成本 " + fmt(Math.abs(pnl)) + "%｜請確認是否依紀律出場");
+                return decision(TradeDecision.Signal.SELL, "🔴 停損警示", now, null,
+                        "已低於成本 " + fmt(Math.abs(pnl)) + "%｜請確認是否依紀律出場");
             }
         }
 
-        if (history.size() < 8) {
-            return decision(TradeDecision.Signal.WAIT, "🟡 蒐集盤中資料",
-                    now, "至少再等待約 8 秒，避免只看單一畫面誤判");
+        if (history.size() < 4) {
+            return decision(TradeDecision.Signal.WAIT, "🟡 蒐集盤中資料", now, null,
+                    "再等待約 " + (4 - history.size()) + " 秒，避免用單一畫面誤判");
         }
 
         MarketSnapshot first = history.peekFirst();
         double momentum = (now.price / first.price - 1d) * 100d;
-        Double rangePosition = null;
-        if (now.hasRange()) rangePosition = (now.price - now.low) / (now.high - now.low);
-
-        TradeDecision combinedKline = combinedKlineDecision(now, momentum);
-        if (combinedKline != null) return combinedKline;
+        IntradayScore score = calculateScore(now, momentum);
 
         if (cost > 0) {
             double pnl = (now.price / cost - 1d) * 100d;
-            if (pnl >= 2d && momentum < -0.12d) {
-                return decision(TradeDecision.Signal.REDUCE, "🟠 移動停利／減碼",
-                        now, "獲利 " + fmt(pnl) + "% 且短線轉弱");
+            if (pnl >= 2d && (score.value < 50 || momentum < -0.12d)) {
+                return decision(TradeDecision.Signal.REDUCE, "🟠 移動停利／減碼", now, score,
+                        "獲利 " + fmt(pnl) + "% 且盤中分數轉弱");
             }
-            if (pnl > 0.3d && momentum >= -0.05d) {
-                return decision(TradeDecision.Signal.HOLD, "🟢 續抱觀察",
-                        now, "目前仍在成本之上，尚未出現明顯轉弱");
+            if (pnl > 0.3d && score.value >= 55) {
+                return decision(TradeDecision.Signal.HOLD, "🟢 續抱觀察", now, score,
+                        "仍在成本之上，盤中結構尚未明顯轉弱");
             }
         }
 
-        boolean aboveOpen = now.open != null && now.price > now.open;
-        boolean belowOpen = now.open != null && now.price < now.open;
+        if (score.dataPoints < 2) {
+            return decision(TradeDecision.Signal.WAIT, "🟡 已讀現價｜等待欄位", now, score,
+                    "目前只有現價，請切到分時五檔或 K 線頁");
+        }
+        if (score.value >= 68) {
+            return decision(TradeDecision.Signal.BUY, "🟢 當沖偏多｜回測可試單", now, score,
+                    "多項盤中條件同步偏多，避免直接追最高價");
+        }
+        if (score.value >= 58) {
+            return decision(TradeDecision.Signal.WAIT, "🟡 當沖略偏多｜等確認", now, score,
+                    "已有偏多條件，但尚未達到試單門檻");
+        }
+        if (score.value <= 32) {
+            return decision(TradeDecision.Signal.SELL, "🔴 當沖偏空｜避免／出場", now, score,
+                    "盤中弱勢條件集中，已有持倉請注意停損");
+        }
+        if (score.value <= 42) {
+            return decision(TradeDecision.Signal.REDUCE, "🟠 當沖偏弱｜減碼防守", now, score,
+                    "弱勢條件較多，不宜搶進");
+        }
+        return decision(TradeDecision.Signal.WAIT, "🟡 多空拉鋸｜暫不下手", now, score,
+                "多空條件尚未形成一致方向");
+    }
 
-        if (momentum >= 0.20d && aboveOpen && rangePosition != null
-                && rangePosition >= 0.55d && rangePosition <= 0.92d) {
-            return decision(TradeDecision.Signal.BUY, "🟢 偏多進場候選",
-                        now, "擷取區間動能 +" + fmt(momentum) + "%｜等回測不破再由本人確認");
+    private IntradayScore calculateScore(MarketSnapshot now, double momentum) {
+        int score = 50;
+        int dataPoints = 0;
+        List<String> reasons = new ArrayList<>();
+
+        if (now.open != null) {
+            dataPoints++;
+            if (now.price >= now.open) {
+                score += 8;
+                reasons.add("站上開盤");
+            } else {
+                score -= 8;
+                reasons.add("低於開盤");
+            }
         }
 
-        if (momentum <= -0.20d && belowOpen) {
-            return decision(TradeDecision.Signal.SELL, "🔴 偏空／避免進場",
-                    now, "擷取區間動能 " + fmt(momentum) + "%｜已有持倉請留意停損");
+        if (now.hasRange()) {
+            dataPoints++;
+            double position = (now.price - now.low) / (now.high - now.low);
+            if (position >= .45d && position <= .88d) {
+                score += 5;
+                reasons.add("位於日內中上區");
+            } else if (position > .96d) {
+                score -= 7;
+                reasons.add("貼近日高防追價");
+            } else if (position < .20d) {
+                score -= 5;
+                reasons.add("貼近日低");
+            }
         }
 
-        if (rangePosition != null && rangePosition > 0.96d && momentum < 0.12d) {
-            return decision(TradeDecision.Signal.WAIT, "🟡 接近當日高點",
-                    now, "動能不足，避免直接追價");
+        if (Math.abs(momentum) >= .03d) {
+            dataPoints++;
+            int change = (int) Math.round(Math.max(-12d, Math.min(12d, momentum * 40d)));
+            score += change;
+            reasons.add(momentum > 0 ? "短線動能上升" : "短線動能下降");
         }
 
-        return decision(TradeDecision.Signal.WAIT, "🟡 暫時觀望",
-                now, "目前沒有同時滿足價格、動能與位置條件");
+        if (now.ma5 != null) {
+            dataPoints++;
+            if (now.price >= now.ma5) {
+                score += 7;
+                reasons.add("站上均5");
+            } else {
+                score -= 7;
+                reasons.add("跌破均5");
+            }
+        }
+        if (now.ma5 != null && now.ma10 != null) {
+            dataPoints++;
+            if (now.ma5 >= now.ma10) {
+                score += 9;
+                reasons.add("均5在均10上");
+            } else {
+                score -= 9;
+                reasons.add("均5在均10下");
+            }
+        }
+        if (now.kdK != null && now.kdD != null) {
+            dataPoints++;
+            if (now.kdK > now.kdD && now.kdK < 85d) {
+                score += 10;
+                reasons.add("KD偏多");
+            } else if (now.kdK < now.kdD) {
+                score -= 10;
+                reasons.add("KD偏空");
+            }
+            if (now.kdK > 85d) {
+                score -= 4;
+                reasons.add("KD過熱");
+            }
+        }
+        if (now.macd != null) {
+            dataPoints++;
+            if (now.macd > 0) {
+                score += 6;
+                reasons.add("MACD正值");
+            } else if (now.macd < 0) {
+                score -= 6;
+                reasons.add("MACD負值");
+            }
+        }
+
+        if (now.bidTotal != null && now.askTotal != null
+                && now.bidTotal + now.askTotal > 0) {
+            dataPoints++;
+            double bidRatio = now.bidTotal / (now.bidTotal + now.askTotal);
+            if (bidRatio >= .60d) {
+                score += 9;
+                reasons.add("五檔委買較強");
+            } else if (bidRatio <= .40d) {
+                score -= 9;
+                reasons.add("五檔委賣較強");
+            }
+        }
+
+        boolean oneFresh = lastOneMinute != null && now.capturedAt - lastOneMinute.capturedAt < 180_000L;
+        boolean fiveFresh = lastFiveMinute != null && now.capturedAt - lastFiveMinute.capturedAt < 180_000L;
+        if (oneFresh && fiveFresh) {
+            dataPoints += 2;
+            if (isKlineBullish(lastOneMinute) && isKlineBullish(lastFiveMinute)) {
+                score += 13;
+                reasons.add("1分5分同步多");
+            } else if (isKlineBearish(lastOneMinute) && isKlineBearish(lastFiveMinute)) {
+                score -= 13;
+                reasons.add("1分5分同步空");
+            } else {
+                reasons.add("1分5分不同步");
+            }
+        }
+
+        if (now.changePercent != null && Math.abs(now.changePercent) >= 4d) {
+            dataPoints++;
+            if (now.changePercent < 0) {
+                score -= 5;
+                reasons.add("當日跌幅偏大");
+            } else {
+                score -= 3;
+                reasons.add("當日漲幅大防追高");
+            }
+        }
+
+        score = Math.max(0, Math.min(100, score));
+        return new IntradayScore(score, dataPoints, reasons);
+    }
+
+    private boolean isKlineBullish(MarketSnapshot snapshot) {
+        return snapshot.price != null && snapshot.ma5 != null && snapshot.ma10 != null
+                && snapshot.kdK != null && snapshot.kdD != null
+                && snapshot.price >= snapshot.ma5
+                && snapshot.ma5 >= snapshot.ma10 * .998d
+                && snapshot.kdK > snapshot.kdD && snapshot.kdK < 85d;
+    }
+
+    private boolean isKlineBearish(MarketSnapshot snapshot) {
+        return snapshot.price != null && snapshot.ma5 != null && snapshot.ma10 != null
+                && snapshot.kdK != null && snapshot.kdD != null
+                && snapshot.price < snapshot.ma5
+                && snapshot.ma5 <= snapshot.ma10 * 1.002d
+                && snapshot.kdK < snapshot.kdD;
+    }
+
+    private boolean isUsable(MarketSnapshot snapshot) {
+        return snapshot.symbol != null && snapshot.price != null && snapshot.confidence >= 5;
+    }
+
+    private TradeDecision cachedOrUnknown(MarketSnapshot now, String reason) {
+        consecutiveMisses++;
+        long age = Math.max(0L, now.capturedAt - lastGoodAt);
+        if (lastDecision != null && age <= CACHE_WINDOW_MS) {
+            return new TradeDecision(lastDecision.signal, lastDecision.headline,
+                    lastDecision.detail + "\n⚠️ OCR 暫漏，沿用上一筆 "
+                            + String.format(Locale.TAIWAN, "%.1f", age / 1000d) + "秒");
+        }
+        return unknown(reason + "｜連續漏讀 " + consecutiveMisses + " 次");
+    }
+
+    private void resetForSymbol(String symbol) {
+        history.clear();
+        currentSymbol = symbol;
+        lastOneMinute = null;
+        lastFiveMinute = null;
+        lastDecision = null;
+        lastGoodAt = 0L;
+        consecutiveMisses = 0;
     }
 
     private TradeDecision unknown(String detail) {
         return new TradeDecision(TradeDecision.Signal.UNKNOWN, "⚪ 資訊不足", detail);
     }
 
-    private TradeDecision combinedKlineDecision(MarketSnapshot now, double momentum) {
-        if (now.screenMode != MarketSnapshot.ScreenMode.KLINE_1M
-                && now.screenMode != MarketSnapshot.ScreenMode.KLINE_5M
-                && now.screenMode != MarketSnapshot.ScreenMode.KLINE) {
-            return null;
-        }
-
-        boolean currentBull = isKlineBullish(now);
-        boolean currentBear = isKlineBearish(now);
-        if (lastOneMinute == null || lastFiveMinute == null) {
-            if (currentBull) {
-                return decision(TradeDecision.Signal.WAIT, "🟡 單一週期偏多",
-                        now, "請再切換 1分K／5分K，完成雙週期確認");
-            }
-            if (currentBear) {
-                return decision(TradeDecision.Signal.WAIT, "🟠 單一週期偏弱",
-                        now, "請再切換 1分K／5分K，完成雙週期確認");
-            }
-            return decision(TradeDecision.Signal.WAIT, "🟡 K線方向不明",
-                    now, "均線與 KD 尚未形成一致方向");
-        }
-
-        boolean oneBull = isKlineBullish(lastOneMinute);
-        boolean fiveBull = isKlineBullish(lastFiveMinute);
-        boolean oneBear = isKlineBearish(lastOneMinute);
-        boolean fiveBear = isKlineBearish(lastFiveMinute);
-
-        if (oneBull && fiveBull && momentum >= -0.05d) {
-            return decision(TradeDecision.Signal.BUY, "🟢 1分＋5分同步偏多",
-                    now, "兩個週期均站上短均線且 KD 偏多｜仍需本人確認進場");
-        }
-        if (oneBear && fiveBear) {
-            return decision(TradeDecision.Signal.SELL, "🔴 1分＋5分同步偏弱",
-                    now, "兩個週期均跌破短均線且 KD 偏空｜避免搶反彈");
-        }
-        return decision(TradeDecision.Signal.WAIT, "🟡 1分／5分不同步",
-                now, "短週期與較大週期方向相反，先不下手");
-    }
-
-    private boolean isKlineBullish(MarketSnapshot snapshot) {
-        return snapshot.price != null
-                && snapshot.ma5 != null
-                && snapshot.ma10 != null
-                && snapshot.kdK != null
-                && snapshot.kdD != null
-                && snapshot.price >= snapshot.ma5
-                && snapshot.ma5 >= snapshot.ma10 * 0.998d
-                && snapshot.kdK > snapshot.kdD
-                && snapshot.kdK < 85d;
-    }
-
-    private boolean isKlineBearish(MarketSnapshot snapshot) {
-        return snapshot.price != null
-                && snapshot.ma5 != null
-                && snapshot.ma10 != null
-                && snapshot.kdK != null
-                && snapshot.kdD != null
-                && snapshot.price < snapshot.ma5
-                && snapshot.ma5 <= snapshot.ma10 * 1.002d
-                && snapshot.kdK < snapshot.kdD;
-    }
-
     private TradeDecision decision(TradeDecision.Signal signal, String headline,
-                                   MarketSnapshot now, String reason) {
+                                   MarketSnapshot now, IntradayScore score, String reason) {
         StringBuilder detail = new StringBuilder(now.screenMode.label)
                 .append("｜現價：").append(fmt(now.price));
+        if (score != null) detail.append("｜當沖：").append(score.value).append("分");
         if (now.changePercent != null) detail.append("｜漲跌：").append(fmt(now.changePercent)).append('%');
         if (now.high != null && now.low != null) {
             detail.append("\n今日高低：").append(fmt(now.high)).append("／").append(fmt(now.low));
@@ -176,11 +289,43 @@ final class DecisionEngine {
         if (now.bestBid != null && now.bestAsk != null) {
             detail.append("\n一檔買賣：").append(fmt(now.bestBid)).append("／").append(fmt(now.bestAsk));
         }
-        detail.append("\n理由：").append(reason);
+        if (now.bidTotal != null && now.askTotal != null) {
+            detail.append("｜五檔量：").append(fmt0(now.bidTotal)).append("／").append(fmt0(now.askTotal));
+        }
+        detail.append("\n讀取：").append(readStatus(now));
+        if (score != null && !score.reasons.isEmpty()) {
+            detail.append("\n條件：").append(String.join("、", score.reasons.subList(0,
+                    Math.min(4, score.reasons.size()))));
+        }
+        detail.append("\n建議：").append(reason);
         return new TradeDecision(signal, headline, detail.toString());
+    }
+
+    private String readStatus(MarketSnapshot now) {
+        return "現價✓ 開高低" + (now.open != null && now.high != null && now.low != null ? "✓" : "—")
+                + " 五檔" + (now.bidTotal != null && now.askTotal != null ? "✓" : "—")
+                + " 均線" + (now.ma5 != null && now.ma10 != null ? "✓" : "—")
+                + " KD" + (now.kdK != null && now.kdD != null ? "✓" : "—")
+                + " MACD" + (now.macd != null ? "✓" : "—");
     }
 
     private String fmt(double value) {
         return String.format(Locale.TAIWAN, "%.2f", value);
+    }
+
+    private String fmt0(double value) {
+        return String.format(Locale.TAIWAN, "%.0f", value);
+    }
+
+    private static final class IntradayScore {
+        final int value;
+        final int dataPoints;
+        final List<String> reasons;
+
+        IntradayScore(int value, int dataPoints, List<String> reasons) {
+            this.value = value;
+            this.dataPoints = dataPoints;
+            this.reasons = reasons;
+        }
     }
 }

@@ -31,6 +31,8 @@ final class MarketSnapshot {
     final Double kdD;
     final Double bestBid;
     final Double bestAsk;
+    final Double bidTotal;
+    final Double askTotal;
     final ScreenMode screenMode;
     final int confidence;
     final long capturedAt;
@@ -38,13 +40,15 @@ final class MarketSnapshot {
     MarketSnapshot(String symbol, Double price, Double open, Double high,
                    Double low, Double changePercent, int confidence) {
         this(symbol, price, open, high, low, changePercent, null, null, null,
-                null, null, null, null, null, ScreenMode.UNKNOWN, confidence);
+                null, null, null, null, null, null, null,
+                ScreenMode.UNKNOWN, confidence);
     }
 
     MarketSnapshot(String symbol, Double price, Double open, Double high,
                    Double low, Double changePercent, Double ma5, Double ma10,
                    Double ma20, Double macd, Double kdK, Double kdD,
-                   Double bestBid, Double bestAsk, ScreenMode screenMode,
+                   Double bestBid, Double bestAsk, Double bidTotal,
+                   Double askTotal, ScreenMode screenMode,
                    int confidence) {
         this.symbol = symbol;
         this.price = price;
@@ -60,6 +64,8 @@ final class MarketSnapshot {
         this.kdD = kdD;
         this.bestBid = bestBid;
         this.bestAsk = bestAsk;
+        this.bidTotal = bidTotal;
+        this.askTotal = askTotal;
         this.screenMode = screenMode;
         this.confidence = confidence;
         this.capturedAt = System.currentTimeMillis();
