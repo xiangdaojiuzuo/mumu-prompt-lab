@@ -307,10 +307,11 @@ final class DecisionEngine {
             detail.append("\n現").append(fmt(now.price)).append("｜多")
                     .append(fmt(levels.bullish)).append("↑")
                     .append(" 空").append(fmt(levels.bearish)).append("↓");
+            detail.append("\n依據：").append(reason);
         } else {
             detail.append("\n現").append(fmt(now.price)).append("｜等待四頁完整");
+            detail.append("\n缺少：").append(missingPageData(now));
         }
-        detail.append("\n依據：").append(reason);
         return new TradeDecision(signal, conciseHeadline(signal, headline), detail.toString());
     }
 
@@ -387,6 +388,30 @@ final class DecisionEngine {
         return snapshot != null && snapshot.price != null
                 && snapshot.high != null && snapshot.low != null
                 && snapshot.ma5 != null && snapshot.ma10 != null;
+    }
+
+    private String missingPageData(MarketSnapshot now) {
+        long freshness = 10 * 60_000L;
+        List<String> missing = new ArrayList<>();
+        addMissing(missing, "資訊", lastQuote, now, freshness, false);
+        addMissing(missing, "日K", lastDay, now, freshness, true);
+        addMissing(missing, "1分", lastOneMinute, now, freshness, true);
+        addMissing(missing, "5分", lastFiveMinute, now, freshness, true);
+        return missing.isEmpty() ? "必要數字" : String.join("、", missing);
+    }
+
+    private void addMissing(List<String> missing, String label, MarketSnapshot snapshot,
+                            MarketSnapshot now, long freshness, boolean kline) {
+        if (!fresh(snapshot, now, freshness)) {
+            missing.add(label + "未讀");
+            return;
+        }
+        if (!kline) {
+            if (!completeQuote(snapshot)) missing.add(label + "價量");
+            return;
+        }
+        if (snapshot.high == null || snapshot.low == null) missing.add(label + "高低");
+        if (snapshot.ma5 == null || snapshot.ma10 == null) missing.add(label + "均線");
     }
 
     private String fmt(double value) {

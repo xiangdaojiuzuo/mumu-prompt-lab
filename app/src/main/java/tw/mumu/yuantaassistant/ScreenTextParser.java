@@ -37,12 +37,15 @@ final class ScreenTextParser {
         Double high = findLabeled(text, "最高", "今高", "高");
         Double low = findLabeled(text, "最低", "今低", "低");
         if (isKline(screenMode)) {
-            if (open == null) open = findLargestPriceInRegion(tokens,
-                    0.38f, 0.255f, 0.62f, 0.298f);
-            if (low == null) low = findLargestPriceInRegion(tokens,
-                    0.69f, 0.255f, 0.96f, 0.298f);
-            if (high == null) high = findLargestPriceInRegion(tokens,
-                    0.38f, 0.292f, 0.62f, 0.334f);
+            Double cellOpen = findLargestPriceInRegion(tokens,
+                    0.34f, 0.248f, 0.67f, 0.300f);
+            Double cellLow = findLargestPriceInRegion(tokens,
+                    0.63f, 0.248f, 0.98f, 0.300f);
+            Double cellHigh = findLargestPriceInRegion(tokens,
+                    0.34f, 0.286f, 0.67f, 0.338f);
+            if (cellOpen != null) open = cellOpen;
+            if (cellLow != null) low = cellLow;
+            if (cellHigh != null) high = cellHigh;
         }
 
         Double percent = findHeaderPercent(tokens);
@@ -54,6 +57,14 @@ final class ScreenTextParser {
         Double ma5 = findLabeled(text, "均價5", "MA5");
         Double ma10 = findLabeled(text, "均價10", "MA10");
         Double ma20 = findLabeled(text, "均價20", "MA20");
+        if (isKline(screenMode)) {
+            if (ma5 == null) ma5 = findLargestPriceInRegion(tokens,
+                    0.00f, 0.322f, 0.25f, 0.370f);
+            if (ma10 == null) ma10 = findLargestPriceInRegion(tokens,
+                    0.23f, 0.322f, 0.49f, 0.370f);
+            if (ma20 == null) ma20 = findLargestPriceInRegion(tokens,
+                    0.47f, 0.322f, 0.75f, 0.370f);
+        }
         Double macd = findSignedIndicator(text, "MACD");
         Double kdK = findKd(text, "K");
         Double kdD = findKd(text, "D");
