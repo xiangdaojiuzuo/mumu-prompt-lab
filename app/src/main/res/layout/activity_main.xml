@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="#0B1220">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="盤中判斷助手"
+        android:textColor="#FFFFFF"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="只讀取螢幕並提供判斷，不會點擊或操作下單。畫面不存入相簿。"
+        android:textColor="#B8C4D6"
+        android:textSize="16sp" />
+
+    <EditText
+        android:id="@+id/costSymbolInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:hint="選填：持股代號，例如 00878"
+        android:inputType="number"
+        android:maxLength="6"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#77869A" />
+
+    <EditText
+        android:id="@+id/costInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:hint="選填：你的持有成本，例如 21.65"
+        android:inputType="numberDecimal"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#77869A" />
+
+    <Button
+        android:id="@+id/startButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="24dp"
+        android:text="開始盤中判斷" />
+
+    <Button
+        android:id="@+id/stopButton"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="12dp"
+        android:text="停止並關閉浮窗" />
+
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="22dp"
+        android:text="尚未啟動"
+        android:textColor="#80CBC4"
+        android:textSize="15sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="原型限制：純畫面辨識約每秒更新，不等於券商逐筆行情。OCR 信心不足時只顯示資訊不足。"
+        android:textColor="#7F8EA3"
+        android:textSize="13sp" />
+</LinearLayout>
