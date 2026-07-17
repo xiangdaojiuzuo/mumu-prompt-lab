@@ -301,33 +301,32 @@ final class DecisionEngine {
 
     private TradeDecision decision(TradeDecision.Signal signal, String headline,
                                    MarketSnapshot now, IntradayScore score, String reason) {
-        StringBuilder detail = new StringBuilder(now.screenMode.label)
-                .append("｜現價：").append(fmt(now.price));
-        if (score != null) detail.append("｜當沖：").append(score.value).append("分");
-        if (now.changePercent != null) detail.append("｜漲跌：").append(fmt(now.changePercent)).append('%');
-        if (now.high != null && now.low != null) {
-            detail.append("\n今日高低：").append(fmt(now.high)).append("／").append(fmt(now.low));
-        }
-        if (now.bestBid != null && now.bestAsk != null) {
-            detail.append("\n一檔買賣：").append(fmt(now.bestBid)).append("／").append(fmt(now.bestAsk));
-        }
-        if (now.bidTotal != null && now.askTotal != null) {
-            detail.append("｜五檔量：").append(fmt0(now.bidTotal)).append("／").append(fmt0(now.askTotal));
-        }
+        StringBuilder detail = new StringBuilder("現價：").append(fmt(now.price));
         TriggerLevels levels = triggerLevels(now);
         if (levels != null) {
-            detail.append("\n偏多價：").append(fmt(levels.bullish)).append(" 以上")
-                    .append("｜偏空價：").append(fmt(levels.bearish)).append(" 以下");
+            detail.append("\n判斷線：").append(fmt(levels.bullish)).append("↑偏多")
+                    .append("｜").append(fmt(levels.bearish)).append("↓偏空");
         } else {
-            detail.append("\n界線資料：").append(collectionStatus(now));
+            detail.append("\n讀取中：").append(collectionStatus(now));
         }
-        detail.append("\n讀取：").append(readStatus(now));
-        if (score != null && !score.reasons.isEmpty()) {
-            detail.append("\n條件：").append(String.join("、", score.reasons.subList(0,
-                    Math.min(4, score.reasons.size()))));
+        detail.append("\n依據：").append(reason);
+        return new TradeDecision(signal, conciseHeadline(signal, headline), detail.toString());
+    }
+
+    private String conciseHeadline(TradeDecision.Signal signal, String original) {
+        if (original.contains("停損") || original.contains("停利")) return original;
+        switch (signal) {
+            case BUY:
+                return "🟢 可以偏多";
+            case SELL:
+                return "🔴 偏空／不要做多";
+            case REDUCE:
+                return "🟠 先不進／減碼";
+            case HOLD:
+                return "🟢 可以續抱觀察";
+            default:
+                return "🟡 先不要進";
         }
-        detail.append("\n建議：").append(reason);
-        return new TradeDecision(signal, headline, detail.toString());
     }
 
     private String readStatus(MarketSnapshot now) {
