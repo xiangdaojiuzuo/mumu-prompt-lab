@@ -12,7 +12,8 @@ final class YuantaLayoutDetector {
         if (text.contains("分時明細") || text.contains("分價明細")) {
             return MarketSnapshot.ScreenMode.TRADES;
         }
-        if (text.contains("買進") && text.contains("賣出") && text.contains("庫存")) {
+        if (text.contains("買進") && text.contains("賣出") && text.contains("庫存")
+                || text.contains("下單") && text.contains("委託") && text.contains("庫存")) {
             return MarketSnapshot.ScreenMode.ORDER;
         }
         int mainTab = selectedMainTab(bitmap);
@@ -21,12 +22,19 @@ final class YuantaLayoutDetector {
         }
         if (mainTab == 1) return MarketSnapshot.ScreenMode.TRADES;
         if (mainTab == 2 || text.contains("均價5") || text.contains("布林") || text.contains("MACD")) {
+            if (selectedDaily(bitmap) || text.matches("(?s).*20\\d{2}/\\d{2}/\\d{2}.*")) {
+                return MarketSnapshot.ScreenMode.KLINE_DAY;
+            }
             int selected = selectedTimeframe(bitmap);
             if (selected == 0) return MarketSnapshot.ScreenMode.KLINE_1M;
             if (selected == 1) return MarketSnapshot.ScreenMode.KLINE_5M;
             return MarketSnapshot.ScreenMode.KLINE;
         }
         return MarketSnapshot.ScreenMode.UNKNOWN;
+    }
+
+    private static boolean selectedDaily(Bitmap bitmap) {
+        return cyanScore(bitmap, 0.008f, 0.232f, 0.086f, 0.260f) >= 35;
     }
 
     private static int selectedMainTab(Bitmap bitmap) {

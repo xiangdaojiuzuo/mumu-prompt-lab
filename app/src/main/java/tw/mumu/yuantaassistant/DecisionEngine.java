@@ -11,6 +11,8 @@ final class DecisionEngine {
 
     private final Deque<MarketSnapshot> history = new ArrayDeque<>();
     private String currentSymbol;
+    private MarketSnapshot lastQuote;
+    private MarketSnapshot lastDay;
     private MarketSnapshot lastOneMinute;
     private MarketSnapshot lastFiveMinute;
     private long lastGoodAt;
@@ -50,6 +52,8 @@ final class DecisionEngine {
             history.removeFirst();
         }
 
+        if (now.screenMode == MarketSnapshot.ScreenMode.QUOTE) lastQuote = now;
+        if (now.screenMode == MarketSnapshot.ScreenMode.KLINE_DAY) lastDay = now;
         if (now.screenMode == MarketSnapshot.ScreenMode.KLINE_1M) lastOneMinute = now;
         if (now.screenMode == MarketSnapshot.ScreenMode.KLINE_5M) lastFiveMinute = now;
 
@@ -85,6 +89,22 @@ final class DecisionEngine {
         if (score.dataPoints < 2) {
             return decision(TradeDecision.Signal.WAIT, "🟡 已讀現價｜等待欄位", now, score,
                     "目前只有現價，請切到分時五檔或 K 線頁");
+        }
+        TriggerLevels levels = triggerLevels(now);
+        if (levels != null) {
+            if (now.price >= levels.bullish) {
+                return decision(score.value >= 50 ? TradeDecision.Signal.BUY : TradeDecision.Signal.WAIT,
+                        "🟢 站上 " + fmt(levels.bullish) + "｜開始偏多", now, score,
+                        "已突破短線壓力；仍需留意日K方向與追價風險");
+            }
+            if (now.price <= levels.bearish) {
+                return decision(TradeDecision.Signal.SELL,
+                        "🔴 跌破 " + fmt(levels.bearish) + "｜開始偏空", now, score,
+                        "已跌破短線支撐；有持倉請依原定風險處理");
+            }
+            return decision(TradeDecision.Signal.WAIT,
+                    "🟡 " + fmt(levels.bearish) + "～" + fmt(levels.bullish) + "｜整理", now, score,
+                    "站上上界開始偏多；跌破下界開始偏空");
         }
         if (score.value >= 68) {
             return decision(TradeDecision.Signal.BUY, "🟢 當沖偏多｜回測可試單", now, score,
@@ -266,6 +286,8 @@ final class DecisionEngine {
     private void resetForSymbol(String symbol) {
         history.clear();
         currentSymbol = symbol;
+        lastQuote = null;
+        lastDay = null;
         lastOneMinute = null;
         lastFiveMinute = null;
         lastDecision = null;
@@ -292,6 +314,13 @@ final class DecisionEngine {
         if (now.bidTotal != null && now.askTotal != null) {
             detail.append("｜五檔量：").append(fmt0(now.bidTotal)).append("／").append(fmt0(now.askTotal));
         }
+        TriggerLevels levels = triggerLevels(now);
+        if (levels != null) {
+            detail.append("\n偏多價：").append(fmt(levels.bullish)).append(" 以上")
+                    .append("｜偏空價：").append(fmt(levels.bearish)).append(" 以下");
+        } else {
+            detail.append("\n界線資料：").append(collectionStatus(now));
+        }
         detail.append("\n讀取：").append(readStatus(now));
         if (score != null && !score.reasons.isEmpty()) {
             detail.append("\n條件：").append(String.join("、", score.reasons.subList(0,
@@ -307,6 +336,40 @@ final class DecisionEngine {
                 + " 均線" + (now.ma5 != null && now.ma10 != null ? "✓" : "—")
                 + " KD" + (now.kdK != null && now.kdD != null ? "✓" : "—")
                 + " MACD" + (now.macd != null ? "✓" : "—");
+    }
+
+    private TriggerLevels triggerLevels(MarketSnapshot now) {
+        long freshness = 10 * 60_000L;
+        if (!fresh(lastQuote, now, freshness) || !fresh(lastDay, now, freshness)
+                || !fresh(lastOneMinute, now, freshness) || !fresh(lastFiveMinute, now, freshness)) {
+            return null;
+        }
+        if (lastOneMinute.high == null || lastOneMinute.low == null
+                || lastFiveMinute.high == null || lastFiveMinute.low == null) return null;
+
+        double bullish = Math.max(lastOneMinute.high, lastFiveMinute.high);
+        double bearish = Math.min(lastOneMinute.low, lastFiveMinute.low);
+        if (lastQuote.open != null && Math.abs(lastQuote.open / now.price - 1d) <= .03d) {
+            bullish = Math.max(bullish, lastQuote.open);
+        }
+        if (lastDay.ma5 != null && lastDay.price < lastDay.ma5
+                && Math.abs(lastDay.ma5 / now.price - 1d) <= .03d) {
+            bullish = Math.max(bullish, lastDay.ma5);
+        }
+        return bullish > bearish ? new TriggerLevels(bullish, bearish) : null;
+    }
+
+    private boolean fresh(MarketSnapshot snapshot, MarketSnapshot now, long maxAge) {
+        return snapshot != null && snapshot.symbol.equals(now.symbol)
+                && now.capturedAt - snapshot.capturedAt <= maxAge;
+    }
+
+    private String collectionStatus(MarketSnapshot now) {
+        long freshness = 10 * 60_000L;
+        return "資訊" + (fresh(lastQuote, now, freshness) ? "✓" : "—")
+                + " 日K" + (fresh(lastDay, now, freshness) ? "✓" : "—")
+                + " 1分" + (fresh(lastOneMinute, now, freshness) ? "✓" : "—")
+                + " 5分" + (fresh(lastFiveMinute, now, freshness) ? "✓" : "—");
     }
 
     private String fmt(double value) {
@@ -326,6 +389,16 @@ final class DecisionEngine {
             this.value = value;
             this.dataPoints = dataPoints;
             this.reasons = reasons;
+        }
+    }
+
+    private static final class TriggerLevels {
+        final double bullish;
+        final double bearish;
+
+        TriggerLevels(double bullish, double bearish) {
+            this.bullish = bullish;
+            this.bearish = bearish;
         }
     }
 }

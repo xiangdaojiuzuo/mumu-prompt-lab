@@ -22,10 +22,14 @@ final class ScreenTextParser {
                                 MarketSnapshot.ScreenMode screenMode) {
         String text = normalize(source);
 
-        String symbol = findHeaderSymbol(tokens);
+        String symbol = screenMode == MarketSnapshot.ScreenMode.ORDER
+                ? findSymbolInRegion(tokens, 0.12f, 0.13f, 0.49f, 0.23f)
+                : findHeaderSymbol(tokens);
         if (symbol == null) symbol = findSymbol(text);
 
-        Double price = findHeaderPrice(tokens);
+        Double price = screenMode == MarketSnapshot.ScreenMode.ORDER
+                ? findLargestPriceInRegion(tokens, 0.50f, 0.13f, 0.84f, 0.23f)
+                : findHeaderPrice(tokens);
         if (price == null) price = findLabeled(text, "成交價", "最新價", "現價", "成交");
         if (price == null) price = findStandalonePriceAfterTime(text);
 
@@ -35,7 +39,9 @@ final class ScreenTextParser {
 
         Double percent = findHeaderPercent(tokens);
         if (percent == null) percent = findPercent(text);
-        percent = applyHeaderDirection(percent, tokens);
+        percent = applyHeaderDirection(percent, tokens,
+                screenMode == MarketSnapshot.ScreenMode.ORDER ? 0.12f : 0.075f,
+                screenMode == MarketSnapshot.ScreenMode.ORDER ? 0.25f : 0.19f);
 
         Double ma5 = findLabeled(text, "均價5", "MA5");
         Double ma10 = findLabeled(text, "均價10", "MA10");
@@ -44,8 +50,11 @@ final class ScreenTextParser {
         Double kdK = findKd(text, "K");
         Double kdD = findKd(text, "D");
 
-        Double bestBid = findTopPriceInRegion(tokens, 0.26f, 0.69f, 0.49f, 0.88f);
-        Double bestAsk = findTopPriceInRegion(tokens, 0.50f, 0.69f, 0.75f, 0.88f);
+        boolean order = screenMode == MarketSnapshot.ScreenMode.ORDER;
+        Double bestBid = findTopPriceInRegion(tokens, 0.26f, order ? 0.32f : 0.69f,
+                0.49f, order ? 0.53f : 0.88f);
+        Double bestAsk = findTopPriceInRegion(tokens, 0.50f, order ? 0.32f : 0.69f,
+                0.75f, order ? 0.53f : 0.88f);
         Double bidTotal = findBottomIntegerInRegion(tokens, 0.01f, 0.79f, 0.25f, 0.91f);
         Double askTotal = findBottomIntegerInRegion(tokens, 0.78f, 0.79f, 0.99f, 0.91f);
 
@@ -82,8 +91,13 @@ final class ScreenTextParser {
     }
 
     private static String findHeaderSymbol(List<OcrToken> tokens) {
+        return findSymbolInRegion(tokens, 0.08f, 0.095f, 0.42f, 0.185f);
+    }
+
+    private static String findSymbolInRegion(List<OcrToken> tokens,
+                                             float left, float top, float right, float bottom) {
         for (OcrToken token : tokens) {
-            if (!token.inside(0.08f, 0.095f, 0.42f, 0.185f)) continue;
+            if (!token.inside(left, top, right, bottom)) continue;
             Matcher matcher = SYMBOL.matcher(token.text);
             if (matcher.find()) {
                 String candidate = matcher.group(1);
@@ -94,10 +108,16 @@ final class ScreenTextParser {
     }
 
     private static Double findHeaderPrice(List<OcrToken> tokens) {
+        return findLargestPriceInRegion(tokens, 0.30f, 0.085f, 0.69f, 0.185f);
+    }
+
+    private static Double findLargestPriceInRegion(List<OcrToken> tokens,
+                                                    float left, float top,
+                                                    float right, float bottom) {
         OcrToken best = null;
         Double value = null;
         for (OcrToken token : tokens) {
-            if (!token.inside(0.30f, 0.085f, 0.69f, 0.185f)) continue;
+            if (!token.inside(left, top, right, bottom)) continue;
             Double candidate = firstDecimal(token.text);
             if (candidate == null || candidate <= 0) continue;
             if (best == null || token.height > best.height) {
@@ -117,10 +137,11 @@ final class ScreenTextParser {
         return null;
     }
 
-    private static Double applyHeaderDirection(Double percent, List<OcrToken> tokens) {
+    private static Double applyHeaderDirection(Double percent, List<OcrToken> tokens,
+                                               float top, float bottom) {
         if (percent == null) return null;
         for (OcrToken token : tokens) {
-            if (!token.inside(0.65f, 0.075f, 0.98f, 0.19f)) continue;
+            if (!token.inside(0.55f, top, 0.98f, bottom)) continue;
             if (token.text.contains("▼") || token.text.contains("▽") || token.text.contains("↓")) {
                 return -Math.abs(percent);
             }

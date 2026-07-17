@@ -3,6 +3,7 @@ package tw.mumu.yuantaassistant;
 final class MarketSnapshot {
     enum ScreenMode {
         QUOTE("分時／五檔"),
+        KLINE_DAY("日K"),
         KLINE_1M("1分K"),
         KLINE_5M("5分K"),
         KLINE("K線"),
