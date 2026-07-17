@@ -226,21 +226,28 @@ public class ScreenAnalysisService extends Service {
 
     private void handleRecognizedText(Text result, Bitmap bitmap) {
         List<OcrToken> tokens = new ArrayList<>();
+        StringBuilder filteredText = new StringBuilder();
         for (Text.TextBlock block : result.getTextBlocks()) {
             for (Text.Line line : block.getLines()) {
+                boolean wroteElement = false;
                 for (Text.Element element : line.getElements()) {
                     Rect box = element.getBoundingBox();
-                    if (box == null) continue;
+                    if (box == null || isInsideOverlay(box)) continue;
                     tokens.add(new OcrToken(
                             element.getText(),
                             box.exactCenterX() / bitmap.getWidth(),
                             box.exactCenterY() / bitmap.getHeight(),
                             box.height() / (float) bitmap.getHeight()));
+                    if (wroteElement) filteredText.append(' ');
+                    filteredText.append(element.getText());
+                    wroteElement = true;
                 }
+                if (wroteElement) filteredText.append('\n');
             }
         }
-        MarketSnapshot.ScreenMode mode = YuantaLayoutDetector.detect(result.getText(), bitmap);
-        MarketSnapshot snapshot = ScreenTextParser.parse(result.getText(), tokens, mode);
+        String cleanText = filteredText.toString();
+        MarketSnapshot.ScreenMode mode = YuantaLayoutDetector.detect(cleanText, bitmap);
+        MarketSnapshot snapshot = ScreenTextParser.parse(cleanText, tokens, mode);
         String costSymbol = getSharedPreferences("assistant", MODE_PRIVATE)
                 .getString("cost_symbol", "");
         double cost = snapshot.symbol != null && snapshot.symbol.equals(costSymbol)
@@ -270,17 +277,29 @@ public class ScreenAnalysisService extends Service {
                         ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                         : WindowManager.LayoutParams.TYPE_PHONE,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                        | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                        | WindowManager.LayoutParams.FLAG_SECURE,
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
         overlayParams.gravity = Gravity.TOP | Gravity.START;
         DisplayMetrics metrics = getResources().getDisplayMetrics();
         overlayParams.x = Math.max(0, metrics.widthPixels - dp(260));
-        overlayParams.y = dp(180);
+        overlayParams.y = dp(360);
         windowManager.addView(overlayView, overlayParams);
 
         overlayView.findViewById(R.id.closeOverlay).setOnClickListener(v -> stopSelf());
         setupDrag(overlayView.findViewById(R.id.dragHandle));
+    }
+
+    private boolean isInsideOverlay(Rect box) {
+        if (overlayView == null || overlayParams == null) return false;
+        int width = overlayView.getWidth();
+        int height = overlayView.getHeight();
+        if (width <= 0 || height <= 0) return false;
+        float centerX = box.exactCenterX();
+        float centerY = box.exactCenterY();
+        return centerX >= overlayParams.x
+                && centerX <= overlayParams.x + width
+                && centerY >= overlayParams.y
+                && centerY <= overlayParams.y + height;
     }
 
     private void setupDrag(View handle) {
