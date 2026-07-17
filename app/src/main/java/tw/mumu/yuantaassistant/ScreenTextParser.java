@@ -36,6 +36,14 @@ final class ScreenTextParser {
         Double open = findLabeled(text, "開盤", "今開", "開");
         Double high = findLabeled(text, "最高", "今高", "高");
         Double low = findLabeled(text, "最低", "今低", "低");
+        if (isKline(screenMode)) {
+            if (open == null) open = findLargestPriceInRegion(tokens,
+                    0.38f, 0.255f, 0.62f, 0.298f);
+            if (low == null) low = findLargestPriceInRegion(tokens,
+                    0.69f, 0.255f, 0.96f, 0.298f);
+            if (high == null) high = findLargestPriceInRegion(tokens,
+                    0.38f, 0.292f, 0.62f, 0.334f);
+        }
 
         Double percent = findHeaderPercent(tokens);
         if (percent == null) percent = findPercent(text);
@@ -81,6 +89,13 @@ final class ScreenTextParser {
         return new MarketSnapshot(symbol, price, open, high, low, percent,
                 ma5, ma10, ma20, macd, kdK, kdD, bestBid, bestAsk,
                 bidTotal, askTotal, screenMode, confidence);
+    }
+
+    private static boolean isKline(MarketSnapshot.ScreenMode mode) {
+        return mode == MarketSnapshot.ScreenMode.KLINE_DAY
+                || mode == MarketSnapshot.ScreenMode.KLINE_1M
+                || mode == MarketSnapshot.ScreenMode.KLINE_5M
+                || mode == MarketSnapshot.ScreenMode.KLINE;
     }
 
     private static String normalize(String source) {

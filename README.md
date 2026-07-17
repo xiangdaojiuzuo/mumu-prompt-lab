@@ -1,4 +1,4 @@
-# 盤中判斷助手（Android 原型 v0.6｜元大 A71 當沖校正版）
+# 盤中判斷助手（Android 原型 v0.7｜元大 A71 當沖校正版）
 
 這是一個僅供個人實機測試的 Android 原型：使用 Android 系統的螢幕擷取授權讀取目前可見畫面，以裝置端中文 OCR 擷取股票代號、成交價、開高低與漲跌幅，再用可拖曳的側邊浮窗顯示盤中判斷。
 
@@ -25,6 +25,9 @@
 - 四個頁面收集完成後，顯示「站上開始偏多」與「跌破開始偏空」的動態價格界線
 - 增加日K頁籤與下單頁專用辨識範圍
 - 浮窗改為精簡模式：只顯示能否進場、偏多／偏空價格線及一句主要依據
+- 四頁狀態固定顯示：✓ 為必要數字完整、△ 為頁面已辨識但數字不完整、— 為未讀或過期
+- 迷你浮窗預設只顯示兩行資料，可點箭頭或文字展開原因
+- 四頁完整且第一次突破偏多／偏空線時發出高優先通知，同方向不重複提醒
 - 不使用 AccessibilityService，不會讀取密碼、不會點擊下單按鈕
 
 ## Android Studio 編譯
@@ -36,7 +39,7 @@
 
 ## GitHub 自動編譯
 
-專案內含 `.github/workflows/build-apk.yml`。推送到 GitHub 的獨立編譯分支後會自動使用 Java 17、Gradle 8.9 與 GitHub 的 Android SDK 編譯除錯版 APK，成品名稱為 `yuanta-screen-assistant-v0.6-debug`，保留 14 天。也可以在 Actions 頁面手動執行 `Build Android APK`。
+專案內含 `.github/workflows/build-apk.yml`。推送到 GitHub 的獨立編譯分支後會自動使用 Java 17、Gradle 8.9 與 GitHub 的 Android SDK 編譯除錯版 APK，成品名稱為 `yuanta-screen-assistant-v0.7-debug`，保留 14 天。也可以在 Actions 頁面手動執行 `Build Android APK`。
 
 第一次啟動需允許：
 

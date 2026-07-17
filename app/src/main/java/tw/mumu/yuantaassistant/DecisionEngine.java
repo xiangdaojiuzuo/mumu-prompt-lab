@@ -301,13 +301,14 @@ final class DecisionEngine {
 
     private TradeDecision decision(TradeDecision.Signal signal, String headline,
                                    MarketSnapshot now, IntradayScore score, String reason) {
-        StringBuilder detail = new StringBuilder("現價：").append(fmt(now.price));
+        StringBuilder detail = new StringBuilder("頁面：").append(collectionStatus(now));
         TriggerLevels levels = triggerLevels(now);
         if (levels != null) {
-            detail.append("\n判斷線：").append(fmt(levels.bullish)).append("↑偏多")
-                    .append("｜").append(fmt(levels.bearish)).append("↓偏空");
+            detail.append("\n現").append(fmt(now.price)).append("｜多")
+                    .append(fmt(levels.bullish)).append("↑")
+                    .append(" 空").append(fmt(levels.bearish)).append("↓");
         } else {
-            detail.append("\n讀取中：").append(collectionStatus(now));
+            detail.append("\n現").append(fmt(now.price)).append("｜等待四頁完整");
         }
         detail.append("\n依據：").append(reason);
         return new TradeDecision(signal, conciseHeadline(signal, headline), detail.toString());
@@ -339,12 +340,12 @@ final class DecisionEngine {
 
     private TriggerLevels triggerLevels(MarketSnapshot now) {
         long freshness = 10 * 60_000L;
-        if (!fresh(lastQuote, now, freshness) || !fresh(lastDay, now, freshness)
-                || !fresh(lastOneMinute, now, freshness) || !fresh(lastFiveMinute, now, freshness)) {
+        if (!fresh(lastQuote, now, freshness) || !completeQuote(lastQuote)
+                || !fresh(lastDay, now, freshness) || !completeKline(lastDay)
+                || !fresh(lastOneMinute, now, freshness) || !completeKline(lastOneMinute)
+                || !fresh(lastFiveMinute, now, freshness) || !completeKline(lastFiveMinute)) {
             return null;
         }
-        if (lastOneMinute.high == null || lastOneMinute.low == null
-                || lastFiveMinute.high == null || lastFiveMinute.low == null) return null;
 
         double bullish = Math.max(lastOneMinute.high, lastFiveMinute.high);
         double bearish = Math.min(lastOneMinute.low, lastFiveMinute.low);
@@ -365,10 +366,27 @@ final class DecisionEngine {
 
     private String collectionStatus(MarketSnapshot now) {
         long freshness = 10 * 60_000L;
-        return "資訊" + (fresh(lastQuote, now, freshness) ? "✓" : "—")
-                + " 日K" + (fresh(lastDay, now, freshness) ? "✓" : "—")
-                + " 1分" + (fresh(lastOneMinute, now, freshness) ? "✓" : "—")
-                + " 5分" + (fresh(lastFiveMinute, now, freshness) ? "✓" : "—");
+        return "資訊" + collectionMark(lastQuote, now, freshness, false)
+                + " 日K" + collectionMark(lastDay, now, freshness, true)
+                + " 1分" + collectionMark(lastOneMinute, now, freshness, true)
+                + " 5分" + collectionMark(lastFiveMinute, now, freshness, true);
+    }
+
+    private String collectionMark(MarketSnapshot snapshot, MarketSnapshot now,
+                                  long freshness, boolean kline) {
+        if (!fresh(snapshot, now, freshness)) return "—";
+        return (kline ? completeKline(snapshot) : completeQuote(snapshot)) ? "✓" : "△";
+    }
+
+    private boolean completeQuote(MarketSnapshot snapshot) {
+        return snapshot != null && snapshot.price != null && snapshot.changePercent != null
+                && (snapshot.open != null || snapshot.bestBid != null && snapshot.bestAsk != null);
+    }
+
+    private boolean completeKline(MarketSnapshot snapshot) {
+        return snapshot != null && snapshot.price != null
+                && snapshot.high != null && snapshot.low != null
+                && snapshot.ma5 != null && snapshot.ma10 != null;
     }
 
     private String fmt(double value) {

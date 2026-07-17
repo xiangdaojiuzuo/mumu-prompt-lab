@@ -49,7 +49,9 @@ public class ScreenAnalysisService extends Service {
     static final String EXTRA_RESULT_DATA = "result_data";
 
     private static final String CHANNEL_ID = "screen_analysis";
+    private static final String ALERT_CHANNEL_ID = "trade_signal_v1";
     private static final int NOTIFICATION_ID = 7101;
+    private static final int SIGNAL_NOTIFICATION_ID = 7102;
     private static final long ANALYSIS_INTERVAL_MS = 900L;
 
     private final Handler mainHandler = new Handler(android.os.Looper.getMainLooper());
@@ -69,6 +71,11 @@ public class ScreenAnalysisService extends Service {
     private TextView symbolText;
     private TextView signalText;
     private TextView detailText;
+    private TextView expandOverlay;
+    private TextView disclaimerText;
+    private boolean overlayExpanded;
+    private TradeDecision.Signal lastAlertSignal = TradeDecision.Signal.UNKNOWN;
+    private String lastAlertSymbol = "";
 
     @Nullable
     @Override
@@ -269,9 +276,11 @@ public class ScreenAnalysisService extends Service {
         symbolText = overlayView.findViewById(R.id.symbolText);
         signalText = overlayView.findViewById(R.id.signalText);
         detailText = overlayView.findViewById(R.id.detailText);
+        expandOverlay = overlayView.findViewById(R.id.expandOverlay);
+        disclaimerText = overlayView.findViewById(R.id.disclaimerText);
 
         overlayParams = new WindowManager.LayoutParams(
-                dp(248),
+                dp(224),
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 Build.VERSION.SDK_INT >= 26
                         ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -281,12 +290,31 @@ public class ScreenAnalysisService extends Service {
                 PixelFormat.TRANSLUCENT);
         overlayParams.gravity = Gravity.TOP | Gravity.START;
         DisplayMetrics metrics = getResources().getDisplayMetrics();
-        overlayParams.x = Math.max(0, metrics.widthPixels - dp(260));
-        overlayParams.y = dp(360);
+        overlayParams.x = Math.max(0, metrics.widthPixels - dp(236));
+        overlayParams.y = dp(390);
         windowManager.addView(overlayView, overlayParams);
 
         overlayView.findViewById(R.id.closeOverlay).setOnClickListener(v -> stopSelf());
+        expandOverlay.setOnClickListener(v -> toggleOverlayExpansion());
+        signalText.setOnClickListener(v -> toggleOverlayExpansion());
+        detailText.setOnClickListener(v -> toggleOverlayExpansion());
         setupDrag(overlayView.findViewById(R.id.dragHandle));
+        applyOverlayExpansion();
+    }
+
+    private void toggleOverlayExpansion() {
+        overlayExpanded = !overlayExpanded;
+        applyOverlayExpansion();
+    }
+
+    private void applyOverlayExpansion() {
+        if (detailText == null || expandOverlay == null || disclaimerText == null) return;
+        detailText.setMaxLines(overlayExpanded ? Integer.MAX_VALUE : 2);
+        expandOverlay.setText(overlayExpanded ? "⌃" : "⌄");
+        disclaimerText.setVisibility(overlayExpanded ? View.VISIBLE : View.GONE);
+        if (windowManager != null && overlayView != null && overlayParams != null) {
+            windowManager.updateViewLayout(overlayView, overlayParams);
+        }
     }
 
     private boolean isInsideOverlay(Rect box) {
@@ -338,7 +366,38 @@ public class ScreenAnalysisService extends Service {
             signalText.setText(decision.headline);
             detailText.setText(decision.detail);
             signalText.setTextColor(signalColor(decision.signal));
+            maybeShowSignalNotification(snapshot, decision);
         });
+    }
+
+    private void maybeShowSignalNotification(MarketSnapshot snapshot, TradeDecision decision) {
+        if (snapshot == null || snapshot.symbol == null) return;
+        boolean pagesComplete = decision.detail.contains("資訊✓ 日K✓ 1分✓ 5分✓");
+        boolean hasTriggerLine = decision.detail.contains("｜多") && decision.detail.contains(" 空");
+        boolean actionable = pagesComplete && hasTriggerLine
+                && (decision.signal == TradeDecision.Signal.BUY
+                || decision.signal == TradeDecision.Signal.SELL);
+
+        if (!actionable) {
+            if (pagesComplete && decision.signal == TradeDecision.Signal.WAIT) {
+                lastAlertSignal = TradeDecision.Signal.WAIT;
+            }
+            return;
+        }
+        if (snapshot.symbol.equals(lastAlertSymbol) && decision.signal == lastAlertSignal) return;
+
+        lastAlertSymbol = snapshot.symbol;
+        lastAlertSignal = decision.signal;
+        Notification alert = new NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(snapshot.symbol + "｜" + decision.headline)
+                .setContentText(decision.detail.replace('\n', '｜'))
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(decision.detail))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(Notification.DEFAULT_ALL)
+                .setAutoCancel(true)
+                .build();
+        getSystemService(NotificationManager.class).notify(SIGNAL_NOTIFICATION_ID, alert);
     }
 
     private int signalColor(TradeDecision.Signal signal) {
@@ -387,7 +446,14 @@ public class ScreenAnalysisService extends Service {
                     "盤中畫面判斷",
                     NotificationManager.IMPORTANCE_LOW);
             channel.setDescription("螢幕擷取運作狀態");
-            getSystemService(NotificationManager.class).createNotificationChannel(channel);
+            NotificationChannel alertChannel = new NotificationChannel(
+                    ALERT_CHANNEL_ID,
+                    "偏多偏空到價提醒",
+                    NotificationManager.IMPORTANCE_HIGH);
+            alertChannel.setDescription("四頁資料完整後的偏多／偏空突破通知");
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            manager.createNotificationChannel(channel);
+            manager.createNotificationChannel(alertChannel);
         }
     }
 
