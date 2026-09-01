@@ -1,12 +1,12 @@
-name: Temporary Mumu Android alpha9 build
+name: Temporary Mumu Android alpha10 build
 
 on:
   pull_request:
     branches:
       - main
     paths:
-      - .github/workflows/codex-build-mumu-alpha9.yml
-      - codex-build/mumu-alpha9-source.zip
+      - .github/workflows/codex-build-mumu-alpha10.yml
+      - codex-build/mumu-alpha10-source.zip
 
 permissions:
   contents: read
@@ -34,25 +34,25 @@ jobs:
       - name: Unpack source
         shell: bash
         run: |
-          mkdir -p "$RUNNER_TEMP/mumu-alpha9"
-          unzip -q codex-build/mumu-alpha9-source.zip -d "$RUNNER_TEMP/mumu-alpha9"
-          test -f "$RUNNER_TEMP/mumu-alpha9/MumuIntradayAssistant/app/build.gradle"
+          mkdir -p "$RUNNER_TEMP/mumu-alpha10"
+          unzip -q codex-build/mumu-alpha10-source.zip -d "$RUNNER_TEMP/mumu-alpha10"
+          test -f "$RUNNER_TEMP/mumu-alpha10/MumuIntradayAssistant/app/build.gradle"
 
       - name: Run core regression tests
         shell: bash
-        working-directory: ${{ runner.temp }}/mumu-alpha9/MumuIntradayAssistant
+        working-directory: ${{ runner.temp }}/mumu-alpha10/MumuIntradayAssistant
         run: bash tools/run_core_tests.sh
 
       - name: Run Android lint and build unsigned release APK
         shell: bash
-        working-directory: ${{ runner.temp }}/mumu-alpha9/MumuIntradayAssistant
+        working-directory: ${{ runner.temp }}/mumu-alpha10/MumuIntradayAssistant
         run: gradle --no-daemon --stacktrace :app:lintDebug :app:assembleRelease
 
       - name: Collect APK and local signing tools
         shell: bash
-        working-directory: ${{ runner.temp }}/mumu-alpha9/MumuIntradayAssistant
+        working-directory: ${{ runner.temp }}/mumu-alpha10/MumuIntradayAssistant
         run: |
-          output="$RUNNER_TEMP/mumu-alpha9-artifact"
+          output="$RUNNER_TEMP/mumu-alpha10-artifact"
           mkdir -p "$output"
           cp app/build/outputs/apk/release/app-release-unsigned.apk "$output/"
           build_tools_dir="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
@@ -62,8 +62,8 @@ jobs:
           chmod +x "$output/aapt2"
           {
             echo "package=com.mumu.intraday.app"
-            echo "versionCode=9"
-            echo "versionName=2.0.0-alpha9"
+            echo "versionCode=10"
+            echo "versionName=2.0.0-alpha10"
             echo "buildTools=$(basename "$build_tools_dir")"
             sha256sum "$output/app-release-unsigned.apk"
           } > "$output/BUILD-METADATA.txt"
@@ -71,7 +71,7 @@ jobs:
       - name: Upload unsigned APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mumu-alpha9-unsigned
-          path: ${{ runner.temp }}/mumu-alpha9-artifact
+          name: mumu-alpha10-unsigned
+          path: ${{ runner.temp }}/mumu-alpha10-artifact
           if-no-files-found: error
           retention-days: 3
