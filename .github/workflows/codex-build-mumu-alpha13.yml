@@ -1,0 +1,78 @@
+name: Temporary Mumu Android alpha13 build
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/codex-build-mumu-alpha13.yml
+      - codex-build/mumu-alpha13-source.zip.b64
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out temporary branch
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Unpack source
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/mumu-alpha13"
+          base64 --decode codex-build/mumu-alpha13-source.zip.b64 > "$RUNNER_TEMP/mumu-alpha13-source.zip"
+          unzip -q "$RUNNER_TEMP/mumu-alpha13-source.zip" -d "$RUNNER_TEMP/mumu-alpha13"
+          test -f "$RUNNER_TEMP/mumu-alpha13/MumuIntradayAssistant/app/build.gradle"
+
+      - name: Run core regression tests
+        shell: bash
+        working-directory: ${{ runner.temp }}/mumu-alpha13/MumuIntradayAssistant
+        run: bash tools/run_core_tests.sh
+
+      - name: Run Android lint and build unsigned release APK
+        shell: bash
+        working-directory: ${{ runner.temp }}/mumu-alpha13/MumuIntradayAssistant
+        run: gradle --no-daemon --stacktrace :app:lintDebug :app:assembleRelease
+
+      - name: Collect APK and local signing tools
+        shell: bash
+        working-directory: ${{ runner.temp }}/mumu-alpha13/MumuIntradayAssistant
+        run: |
+          output="$RUNNER_TEMP/mumu-alpha13-artifact"
+          mkdir -p "$output"
+          cp app/build/outputs/apk/release/app-release-unsigned.apk "$output/"
+          build_tools_dir="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          test -f "$build_tools_dir/lib/apksigner.jar"
+          cp "$build_tools_dir/lib/apksigner.jar" "$output/"
+          cp "$build_tools_dir/aapt2" "$output/"
+          chmod +x "$output/aapt2"
+          {
+            echo "package=com.mumu.intraday.app"
+            echo "versionCode=13"
+            echo "versionName=2.0.0-alpha13"
+            echo "buildTools=$(basename "$build_tools_dir")"
+            sha256sum "$output/app-release-unsigned.apk"
+          } > "$output/BUILD-METADATA.txt"
+
+      - name: Upload unsigned APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mumu-alpha13-unsigned
+          path: ${{ runner.temp }}/mumu-alpha13-artifact
+          if-no-files-found: error
+          retention-days: 3
